@@ -1,6 +1,8 @@
 import Navbar from "@/components/layout/Navbar";
 import Features from "@/components/home/Features";
 import HowItWorks from "@/components/home/HowItWorks";
+import CTA from "@/components/home/CTA";
+import Footer from "@/components/layout/Footer";
 
 export default function Home() {
   return (
@@ -45,7 +47,12 @@ export default function Home() {
 
       {/* Features */}
       <Features />
+      {/* HowItWorks */}
       <HowItWorks />
+      {/* CTA */}
+      <CTA />
+      {/* Footer */}
+      <Footer />
     </main>
   );
 }
