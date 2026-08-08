@@ -1,10 +1,12 @@
 import Navbar from "@/components/layout/Navbar";
+import Features from "@/components/home/Features";
 
 export default function Home() {
   return (
     <main id="home" className="min-h-screen bg-white">
       <Navbar />
 
+      {/* Hero */}
       <section className="flex min-h-screen items-center justify-center px-6 pt-16">
         <div className="text-center">
           <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-green-500">
@@ -39,6 +41,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Features */}
+      <Features />
     </main>
   );
 }
