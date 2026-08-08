@@ -1,5 +1,6 @@
 import Navbar from "@/components/layout/Navbar";
 import Features from "@/components/home/Features";
+import HowItWorks from "@/components/home/HowItWorks";
 
 export default function Home() {
   return (
@@ -44,6 +45,7 @@ export default function Home() {
 
       {/* Features */}
       <Features />
+      <HowItWorks />
     </main>
   );
 }
