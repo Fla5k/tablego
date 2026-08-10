@@ -1,0 +1,150 @@
+"use client";
+
+import { useParams, useSearchParams } from "next/navigation";
+
+export default function BookingSuccessPage() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+
+  const selectedDate = searchParams.get("date");
+  const selectedTime = searchParams.get("time");
+  const guestCount = searchParams.get("guests");
+  const selectedTable = searchParams.get("table");
+
+  const bookingCode = searchParams.get("code") || "TG-20260810-001";
+
+  const formattedDate = selectedDate
+    ? new Date(`${selectedDate}T00:00:00`).toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : "Belum dipilih";
+
+  return (
+    <main className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="border-b border-gray-200 bg-white">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+          <div className="text-2xl font-bold tracking-tight">
+            <span className="text-gray-900">Table</span>
+            <span className="text-green-500">Go</span>
+          </div>
+
+          <span className="text-sm text-gray-500">Booking Berhasil</span>
+        </div>
+      </header>
+
+      {/* Content */}
+      <div className="mx-auto max-w-2xl px-6 py-12">
+        {/* Success */}
+        <div className="text-center">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
+            <span className="text-4xl font-bold text-green-600">✓</span>
+          </div>
+
+          <p className="mt-6 text-sm font-semibold uppercase tracking-wider text-green-500">
+            Booking Berhasil
+          </p>
+
+          <h1 className="mt-3 text-4xl font-bold tracking-tight text-gray-900">
+            Meja Kamu Berhasil Dipesan!
+          </h1>
+
+          <p className="mx-auto mt-4 max-w-xl text-gray-600">
+            Terima kasih telah menggunakan TableGo. Simpan kode booking kamu
+            untuk melihat detail reservasi.
+          </p>
+        </div>
+
+        {/* Booking Code */}
+        <div className="mt-10 rounded-2xl border border-green-200 bg-green-50 p-6 text-center">
+          <p className="text-sm font-medium text-green-700">Kode Booking</p>
+
+          <p className="mt-2 text-3xl font-bold tracking-widest text-gray-900">
+            {bookingCode}
+          </p>
+
+          <p className="mt-2 text-xs text-green-600">
+            Tunjukkan kode ini saat datang ke restoran.
+          </p>
+        </div>
+
+        {/* Booking Detail */}
+        <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="border-b border-gray-100 pb-5">
+            <p className="text-sm text-gray-500">Restoran</p>
+
+            <h2 className="mt-1 text-2xl font-bold text-gray-900">
+              Kopi Senja
+            </h2>
+
+            <p className="mt-1 text-sm text-gray-500">Bandung, Jawa Barat</p>
+          </div>
+
+          <div className="grid gap-6 py-6 sm:grid-cols-2">
+            <div>
+              <p className="text-sm text-gray-500">Tanggal</p>
+
+              <p className="mt-1 font-semibold text-gray-900">
+                {formattedDate}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-500">Waktu</p>
+
+              <p className="mt-1 font-semibold text-gray-900">
+                {selectedTime || "Belum dipilih"}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-500">Jumlah Tamu</p>
+
+              <p className="mt-1 font-semibold text-gray-900">
+                {guestCount || "0"} orang
+              </p>
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-500">Meja</p>
+
+              <p className="mt-1 font-semibold text-green-600">
+                {selectedTable || "Belum dipilih"}
+              </p>
+            </div>
+          </div>
+
+          {/* Status */}
+          <div className="rounded-xl bg-gray-50 p-4">
+            <p className="text-sm font-medium text-gray-700">Status Booking</p>
+
+            <div className="mt-2 flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
+
+              <span className="text-sm font-semibold text-green-600">
+                Dikonfirmasi
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Action */}
+        <button
+          type="button"
+          onClick={() => {
+            window.location.href = `/restaurants/${params.slug}`;
+          }}
+          className="mt-6 w-full rounded-xl bg-green-500 px-5 py-3.5 font-semibold text-white transition hover:bg-green-600"
+        >
+          Kembali ke Restoran
+        </button>
+
+        <p className="mt-5 text-center text-xs text-gray-400">
+          🔒 Simpan kode booking kamu sebagai bukti reservasi.
+        </p>
+      </div>
+    </main>
+  );
+}
