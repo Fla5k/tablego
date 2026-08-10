@@ -6,6 +6,7 @@ import TableSelector from "@/components/booking/TableSelector";
 export default function BookingPage() {
   const [guestCount, setGuestCount] = useState(2);
   const [selectedTime, setSelectedTime] = useState("19:00");
+  const [selectedTable, setSelectedTable] = useState<string | null>(null);
 
   const timeSlots = [
     "17:00",
@@ -150,9 +151,7 @@ export default function BookingPage() {
                   +
                 </button>
 
-                <span className="text-sm text-gray-500">
-                  orang
-                </span>
+                <span className="text-sm text-gray-500">orang</span>
               </div>
             </div>
 
@@ -160,9 +159,7 @@ export default function BookingPage() {
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="flex items-start justify-between gap-6">
                 <div>
-                  <p className="text-sm text-gray-500">
-                    Ringkasan Booking
-                  </p>
+                  <p className="text-sm text-gray-500">Ringkasan Booking</p>
 
                   <h2 className="mt-2 text-xl font-bold text-gray-900">
                     Kopi Senja
@@ -176,11 +173,9 @@ export default function BookingPage() {
                 </div>
               </div>
 
-              <div className="mt-6 grid gap-4 border-t border-gray-100 pt-5 sm:grid-cols-3">
+              <div className="mt-6 grid gap-4 border-t border-gray-100 pt-5 sm:grid-cols-4">
                 <div>
-                  <p className="text-xs text-gray-500">
-                    Tanggal
-                  </p>
+                  <p className="text-xs text-gray-500">Tanggal</p>
 
                   <p className="mt-1 text-sm font-medium text-gray-900">
                     Pilih tanggal
@@ -188,9 +183,7 @@ export default function BookingPage() {
                 </div>
 
                 <div>
-                  <p className="text-xs text-gray-500">
-                    Waktu
-                  </p>
+                  <p className="text-xs text-gray-500">Waktu</p>
 
                   <p className="mt-1 text-sm font-medium text-green-600">
                     {selectedTime}
@@ -198,14 +191,20 @@ export default function BookingPage() {
                 </div>
 
                 <div>
-                  <p className="text-xs text-gray-500">
-                    Tamu
-                  </p>
+                  <p className="text-xs text-gray-500">Tamu</p>
 
                   <p className="mt-1 text-sm font-medium text-gray-900">
                     {guestCount} orang
                   </p>
                 </div>
+              </div>
+
+              <div>
+                <p className="text-xs text-gray-500">Meja</p>
+
+                <p className="mt-1 text-sm font-medium text-gray-900">
+                  {selectedTable ?? "Pilih meja"}
+                </p>
               </div>
 
               <button
@@ -225,7 +224,11 @@ export default function BookingPage() {
               RIGHT COLUMN
           ========================== */}
           <aside className="lg:sticky lg:top-6">
-            <TableSelector guestCount={guestCount} />
+            <TableSelector
+              guestCount={guestCount}
+              selectedTable={selectedTable}
+              onSelectTable={setSelectedTable}
+            />
           </aside>
         </div>
       </div>

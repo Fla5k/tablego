@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-
 interface Table {
   id: string;
   capacity: number;
@@ -43,13 +41,15 @@ const tables: Table[] = [
 
 interface TableSelectorProps {
   guestCount: number;
+  selectedTable: string | null;
+  onSelectTable: (tableId: string) => void;
 }
 
 export default function TableSelector({
   guestCount,
+  selectedTable,
+  onSelectTable,
 }: TableSelectorProps) {
-  const [selectedTable, setSelectedTable] = useState<string | null>(null);
-
   const suitableTables = tables.filter(
     (table) => table.capacity >= guestCount
   );
@@ -73,7 +73,6 @@ export default function TableSelector({
 
       {/* Floor Plan */}
       <div className="mt-6 rounded-2xl bg-gray-50 p-5">
-
         {/* Window */}
         <div className="mb-7 rounded-xl border border-dashed border-gray-300 bg-white py-3 text-center">
           <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
@@ -81,7 +80,7 @@ export default function TableSelector({
           </span>
         </div>
 
-        {/* Tables Grid */}
+        {/* Tables */}
         <div className="grid grid-cols-3 gap-x-4 gap-y-6">
           {suitableTables.map((table) => {
             const isSelected = selectedTable === table.id;
@@ -92,7 +91,7 @@ export default function TableSelector({
                 key={table.id}
                 type="button"
                 disabled={isOccupied}
-                onClick={() => setSelectedTable(table.id)}
+                onClick={() => onSelectTable(table.id)}
                 className={`group flex flex-col items-center text-center transition ${
                   isOccupied
                     ? "cursor-not-allowed opacity-40"
@@ -109,7 +108,7 @@ export default function TableSelector({
                         : "border-gray-200 group-hover:border-green-400 group-hover:shadow-sm"
                   }`}
                 >
-                  {/* Chair top */}
+                  {/* Chair Top */}
                   <span
                     className={`absolute -top-2 h-3 w-6 rounded-md border bg-white ${
                       isSelected
@@ -118,7 +117,7 @@ export default function TableSelector({
                     }`}
                   />
 
-                  {/* Chair bottom */}
+                  {/* Chair Bottom */}
                   <span
                     className={`absolute -bottom-2 h-3 w-6 rounded-md border bg-white ${
                       isSelected
@@ -127,7 +126,7 @@ export default function TableSelector({
                     }`}
                   />
 
-                  {/* Chair left */}
+                  {/* Chair Left */}
                   <span
                     className={`absolute -left-2 h-6 w-3 rounded-md border bg-white ${
                       isSelected
@@ -136,7 +135,7 @@ export default function TableSelector({
                     }`}
                   />
 
-                  {/* Chair right */}
+                  {/* Chair Right */}
                   <span
                     className={`absolute -right-2 h-6 w-3 rounded-md border bg-white ${
                       isSelected
@@ -218,7 +217,7 @@ export default function TableSelector({
         </div>
       </div>
 
-      {/* Selected */}
+      {/* Selected Table */}
       {selectedTable && (
         <div className="mt-5 flex items-center justify-between rounded-xl bg-green-50 px-4 py-3">
           <div>
