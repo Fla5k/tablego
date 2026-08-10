@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  password  String
+  phone     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  bookings  Booking[]
+
+  @@map("users")
+}
+
+model Restaurant {
+  id          Int               @id @default(autoincrement())
+  name        String
+  description String?
+  address     String
+  phone       String?
+  image       String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  bookings    Booking[]
+  tables      RestaurantTable[]
+
+  @@map("restaurants")
+}
+
+model RestaurantTable {
+  id           Int        @id @default(autoincrement())
+  restaurantId Int
+  tableNumber  String
+  capacity     Int
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  bookings     Booking[]
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+
+  @@unique([restaurantId, tableNumber])
+  @@map("restaurant_tables")
+}
+
+model Booking {
+  id           Int             @id @default(autoincrement())
+  userId       Int
+  restaurantId Int
+  tableId      Int
+  bookingDate  DateTime
+  guestCount   Int
+  status       BookingStatus   @default(PENDING)
+  notes        String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  restaurant   Restaurant      @relation(fields: [restaurantId], references: [id])
+  table        RestaurantTable @relation(fields: [tableId], references: [id])
+  user         User            @relation(fields: [userId], references: [id])
+
+  @@index([restaurantId, bookingDate])
+  @@index([tableId, bookingDate])
+  @@index([userId])
+  @@map("bookings")
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
