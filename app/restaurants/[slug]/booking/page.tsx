@@ -12,7 +12,7 @@ export default function BookingPage() {
 
   const [guestCount, setGuestCount] = useState(2);
   const [selectedTime, setSelectedTime] = useState("19:00");
-  const [selectedTable, setSelectedTable] = useState<string | null>(null);
+  const [selectedTable, setSelectedTable] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -45,7 +45,7 @@ export default function BookingPage() {
       date: selectedDate,
       time: selectedTime,
       guests: guestCount.toString(),
-      table: selectedTable,
+      table: selectedTable.toString(),
     });
 
     router.push(
@@ -273,6 +273,7 @@ export default function BookingPage() {
           {/* RIGHT COLUMN */}
           <aside className="lg:sticky lg:top-6">
             <TableSelector
+              slug={slug}
               guestCount={guestCount}
               selectedTable={selectedTable}
               onSelectTable={setSelectedTable}
