@@ -6,11 +6,14 @@ interface Table {
   id: number;
   tableNumber: string;
   capacity: number;
+  available: boolean;
 }
 
 interface TableSelectorProps {
   slug: string;
   guestCount: number;
+  selectedDate: string;
+  selectedTime: string;
   selectedTable: number | null;
   onSelectTable: (tableId: number) => void;
 }
@@ -18,6 +21,8 @@ interface TableSelectorProps {
 export default function TableSelector({
   slug,
   guestCount,
+  selectedDate,
+  selectedTime,
   selectedTable,
   onSelectTable,
 }: TableSelectorProps) {
@@ -31,7 +36,9 @@ export default function TableSelector({
         setLoading(true);
         setError("");
 
-        const response = await fetch(`/api/restaurants/${slug}`);
+        const response = await fetch(
+          `/api/restaurants/${slug}?date=${selectedDate}&time=${selectedTime}`,
+        );
 
         if (!response.ok) {
           throw new Error("Gagal mengambil data restoran.");
@@ -53,8 +60,10 @@ export default function TableSelector({
     };
 
     fetchTables();
-  }, [slug]);
+  }, [slug, selectedDate, selectedTime]);
 
+  // Hanya tampilkan meja yang kapasitasnya cukup untuk jumlah tamu.
+  // Meja yang tidak tersedia tetap ditampilkan agar user tahu statusnya.
   const suitableTables = tables.filter((table) => table.capacity >= guestCount);
 
   return (
@@ -102,53 +111,85 @@ export default function TableSelector({
               <div className="grid grid-cols-3 gap-x-4 gap-y-6">
                 {suitableTables.map((table) => {
                   const isSelected = selectedTable === table.id;
+                  const isUnavailable = !table.available;
 
                   return (
                     <button
                       key={table.id}
                       type="button"
-                      onClick={() => onSelectTable(table.id)}
-                      className="group flex flex-col items-center text-center transition"
+                      disabled={isUnavailable}
+                      onClick={() => {
+                        if (!isUnavailable) {
+                          onSelectTable(table.id);
+                        }
+                      }}
+                      className={`group flex flex-col items-center text-center transition ${
+                        isUnavailable
+                          ? "cursor-not-allowed opacity-50"
+                          : "cursor-pointer"
+                      }`}
                     >
                       {/* Table */}
                       <div
                         className={`relative flex h-20 w-full max-w-[90px] items-center justify-center rounded-xl border-2 bg-white transition-all ${
-                          isSelected
-                            ? "border-green-500 bg-green-50 shadow-md"
-                            : "border-gray-200 group-hover:border-green-400 group-hover:shadow-sm"
+                          isUnavailable
+                            ? "border-red-200 bg-red-50"
+                            : isSelected
+                              ? "border-green-500 bg-green-50 shadow-md"
+                              : "border-gray-200 group-hover:border-green-400 group-hover:shadow-sm"
                         }`}
                       >
                         {/* Chair Top */}
                         <span
                           className={`absolute -top-2 h-3 w-6 rounded-md border bg-white ${
-                            isSelected ? "border-green-500" : "border-gray-300"
+                            isUnavailable
+                              ? "border-red-200"
+                              : isSelected
+                                ? "border-green-500"
+                                : "border-gray-300"
                           }`}
                         />
 
                         {/* Chair Bottom */}
                         <span
                           className={`absolute -bottom-2 h-3 w-6 rounded-md border bg-white ${
-                            isSelected ? "border-green-500" : "border-gray-300"
+                            isUnavailable
+                              ? "border-red-200"
+                              : isSelected
+                                ? "border-green-500"
+                                : "border-gray-300"
                           }`}
                         />
 
                         {/* Chair Left */}
                         <span
                           className={`absolute -left-2 h-6 w-3 rounded-md border bg-white ${
-                            isSelected ? "border-green-500" : "border-gray-300"
+                            isUnavailable
+                              ? "border-red-200"
+                              : isSelected
+                                ? "border-green-500"
+                                : "border-gray-300"
                           }`}
                         />
 
                         {/* Chair Right */}
                         <span
                           className={`absolute -right-2 h-6 w-3 rounded-md border bg-white ${
-                            isSelected ? "border-green-500" : "border-gray-300"
+                            isUnavailable
+                              ? "border-red-200"
+                              : isSelected
+                                ? "border-green-500"
+                                : "border-gray-300"
                           }`}
                         />
 
                         <span
                           className={`relative z-10 text-sm font-bold ${
-                            isSelected ? "text-green-600" : "text-gray-900"
+                            isUnavailable
+                              ? "text-red-400"
+                              : isSelected
+                                ? "text-green-600"
+                                : "text-gray-900"
                           }`}
                         >
                           {table.tableNumber}
@@ -163,16 +204,28 @@ export default function TableSelector({
                       {/* Status */}
                       <span
                         className={`mt-1 flex items-center gap-1 text-xs font-medium ${
-                          isSelected ? "text-green-600" : "text-gray-500"
+                          isUnavailable
+                            ? "text-red-500"
+                            : isSelected
+                              ? "text-green-600"
+                              : "text-gray-500"
                         }`}
                       >
                         <span
                           className={`h-2 w-2 rounded-full ${
-                            isSelected ? "bg-green-500" : "bg-gray-300"
+                            isUnavailable
+                              ? "bg-red-400"
+                              : isSelected
+                                ? "bg-green-500"
+                                : "bg-gray-300"
                           }`}
                         />
 
-                        {isSelected ? "Dipilih" : "Tersedia"}
+                        {isUnavailable
+                          ? "Sudah Dibooking"
+                          : isSelected
+                            ? "Dipilih"
+                            : "Tersedia"}
                       </span>
                     </button>
                   );
@@ -199,7 +252,7 @@ export default function TableSelector({
           </div>
 
           {/* Legend */}
-          <div className="mt-5 flex items-center justify-center gap-5 text-xs text-gray-500">
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-5 text-xs text-gray-500">
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-gray-300" />
               Tersedia
@@ -208,6 +261,11 @@ export default function TableSelector({
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
               Dipilih
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
+              Sudah Dibooking
             </div>
           </div>
 

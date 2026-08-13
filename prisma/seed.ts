@@ -17,6 +17,44 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log("🌱 Mulai seed database...");
 
+  // =========================
+  // USER
+  // =========================
+
+  let user = await prisma.user.findFirst({
+    where: {
+      email: "test@tablego.com",
+    },
+  });
+
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        name: "Test User",
+        email: "test@tablego.com",
+        password: "password123",
+      },
+    });
+
+    console.log(`✅ User dibuat: ${user.name} (ID: ${user.id})`);
+  } else {
+    user = await prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        name: "Test User",
+        password: "password123",
+      },
+    });
+
+    console.log(`✅ User tersedia: ${user.name} (ID: ${user.id})`);
+  }
+
+  // =========================
+  // RESTORAN
+  // =========================
+
   const restaurants = [
     {
       name: "Kopi Senja",
@@ -56,12 +94,37 @@ async function main() {
     },
   ];
 
+  // =========================
+  // RESTORAN + MEJA
+  // =========================
+
   for (const restaurantData of restaurants) {
-    const restaurant = await prisma.restaurant.create({
-      data: restaurantData,
+    let restaurant = await prisma.restaurant.findFirst({
+      where: {
+        name: restaurantData.name,
+      },
     });
 
-    console.log(`✅ Restoran dibuat: ${restaurant.name}`);
+    if (!restaurant) {
+      restaurant = await prisma.restaurant.create({
+        data: restaurantData,
+      });
+
+      console.log(`✅ Restoran dibuat: ${restaurant.name}`);
+    } else {
+      restaurant = await prisma.restaurant.update({
+        where: {
+          id: restaurant.id,
+        },
+        data: restaurantData,
+      });
+
+      console.log(`♻️ Restoran sudah ada: ${restaurant.name}`);
+    }
+
+    // =========================
+    // MEJA
+    // =========================
 
     const tables = [
       { tableNumber: "T1", capacity: 2 },
@@ -71,14 +134,26 @@ async function main() {
       { tableNumber: "T5", capacity: 6 },
     ];
 
-    await prisma.restaurantTable.createMany({
-      data: tables.map((table) => ({
-        ...table,
-        restaurantId: restaurant.id,
-      })),
-    });
+    for (const tableData of tables) {
+      const existingTable = await prisma.restaurantTable.findFirst({
+        where: {
+          restaurantId: restaurant.id,
+          tableNumber: tableData.tableNumber,
+        },
+      });
 
-    console.log(`   🪑 5 meja dibuat untuk ${restaurant.name}`);
+      if (!existingTable) {
+        await prisma.restaurantTable.create({
+          data: {
+            restaurantId: restaurant.id,
+            tableNumber: tableData.tableNumber,
+            capacity: tableData.capacity,
+          },
+        });
+      }
+    }
+
+    console.log(`   🪑 5 meja tersedia untuk ${restaurant.name}`);
   }
 
   console.log("🎉 Seed database selesai!");

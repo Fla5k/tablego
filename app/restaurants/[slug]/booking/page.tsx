@@ -275,6 +275,8 @@ export default function BookingPage() {
             <TableSelector
               slug={slug}
               guestCount={guestCount}
+              selectedDate={selectedDate}
+              selectedTime={selectedTime}
               selectedTable={selectedTable}
               onSelectTable={setSelectedTable}
             />
