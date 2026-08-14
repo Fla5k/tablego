@@ -60,7 +60,8 @@ export default function BookingConfirmationPage() {
         );
       }
 
-      const bookingCode = `TG-${Date.now().toString().slice(-8)}`;
+      // ID booking berasal dari database
+      const bookingCode = `TG-${String(data.booking.id).padStart(6, "0")}`;
 
       const successParams = new URLSearchParams({
         date: selectedDate,
@@ -86,7 +87,6 @@ export default function BookingConfirmationPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
           <div className="text-2xl font-bold tracking-tight">
@@ -98,9 +98,7 @@ export default function BookingConfirmationPage() {
         </div>
       </header>
 
-      {/* Content */}
       <div className="mx-auto max-w-3xl px-6 py-12">
-        {/* Title */}
         <div className="text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
             <span className="text-2xl font-bold text-green-600">✓</span>
@@ -119,9 +117,7 @@ export default function BookingConfirmationPage() {
           </p>
         </div>
 
-        {/* Booking Card */}
         <div className="mt-10 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          {/* Restaurant */}
           <div className="border-b border-gray-100 pb-6">
             <p className="text-sm text-gray-500">Restoran</p>
 
@@ -132,9 +128,7 @@ export default function BookingConfirmationPage() {
             <p className="mt-1 text-sm text-gray-500">Bandung, Jawa Barat</p>
           </div>
 
-          {/* Booking Details */}
           <div className="grid gap-6 py-6 sm:grid-cols-2">
-            {/* Date */}
             <div>
               <p className="text-sm text-gray-500">Tanggal</p>
 
@@ -143,7 +137,6 @@ export default function BookingConfirmationPage() {
               </p>
             </div>
 
-            {/* Time */}
             <div>
               <p className="text-sm text-gray-500">Waktu</p>
 
@@ -152,7 +145,6 @@ export default function BookingConfirmationPage() {
               </p>
             </div>
 
-            {/* Guests */}
             <div>
               <p className="text-sm text-gray-500">Jumlah Tamu</p>
 
@@ -161,7 +153,6 @@ export default function BookingConfirmationPage() {
               </p>
             </div>
 
-            {/* Table */}
             <div>
               <p className="text-sm text-gray-500">Meja</p>
 
@@ -171,7 +162,6 @@ export default function BookingConfirmationPage() {
             </div>
           </div>
 
-          {/* Information */}
           <div className="rounded-xl bg-green-50 p-4">
             <p className="text-sm font-medium text-green-700">
               Data booking sudah siap dikonfirmasi.
@@ -182,14 +172,12 @@ export default function BookingConfirmationPage() {
             </p>
           </div>
 
-          {/* Error */}
           {errorMessage && (
             <div className="mt-4 rounded-xl bg-red-50 p-4">
               <p className="text-sm font-medium text-red-600">{errorMessage}</p>
             </div>
           )}
 
-          {/* Actions */}
           <div className="mt-6 space-y-3">
             <button
               type="button"
@@ -211,7 +199,6 @@ export default function BookingConfirmationPage() {
           </div>
         </div>
 
-        {/* Security */}
         <p className="mt-6 text-center text-xs text-gray-400">
           🔒 Data booking kamu aman dan tidak akan dibagikan ke pihak lain.
         </p>
