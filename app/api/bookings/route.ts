@@ -1,12 +1,28 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
+    // =========================
+    // CEK SESSION USER
+    // =========================
+
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Kamu harus login terlebih dahulu.",
+        },
+        { status: 401 },
+      );
+    }
+
     const body = await request.json();
 
     const {
-      userId,
       restaurantId,
       tableId,
       bookingDate,
@@ -19,7 +35,6 @@ export async function POST(request: Request) {
     // =========================
 
     if (
-      !userId ||
       !restaurantId ||
       !tableId ||
       !bookingDate ||
@@ -34,14 +49,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const userIdNumber = Number(userId);
     const restaurantIdNumber = Number(restaurantId);
     const tableIdNumber = Number(tableId);
     const guestCountNumber = Number(guestCount);
     const selectedBookingDate = new Date(bookingDate);
 
     if (
-      Number.isNaN(userIdNumber) ||
       Number.isNaN(restaurantIdNumber) ||
       Number.isNaN(tableIdNumber) ||
       Number.isNaN(guestCountNumber) ||
@@ -53,26 +66,6 @@ export async function POST(request: Request) {
           message: "Data booking tidak valid.",
         },
         { status: 400 },
-      );
-    }
-
-    // =========================
-    // CEK USER
-    // =========================
-
-    const user = await prisma.user.findUnique({
-      where: {
-        id: userIdNumber,
-      },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "User tidak ditemukan.",
-        },
-        { status: 404 },
       );
     }
 
@@ -172,7 +165,7 @@ export async function POST(request: Request) {
 
     const booking = await prisma.booking.create({
       data: {
-        userId: userIdNumber,
+        userId: user.id,
         restaurantId: restaurantIdNumber,
         tableId: tableIdNumber,
         bookingDate: selectedBookingDate,
