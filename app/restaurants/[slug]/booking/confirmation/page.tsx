@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 
 export default function BookingConfirmationPage() {
   const router = useRouter();
@@ -14,6 +15,9 @@ export default function BookingConfirmationPage() {
   const guestCount = searchParams.get("guests");
   const selectedTable = searchParams.get("table");
 
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
   const formattedDate = selectedDate
     ? new Date(`${selectedDate}T00:00:00`).toLocaleDateString("id-ID", {
         day: "numeric",
@@ -22,20 +26,62 @@ export default function BookingConfirmationPage() {
       })
     : "Belum dipilih";
 
-  const handleConfirm = () => {
-    const bookingCode = `TG-${Date.now().toString().slice(-8)}`;
+  const handleConfirm = async () => {
+    if (!selectedDate || !selectedTime || !guestCount || !selectedTable) {
+      setErrorMessage("Data booking belum lengkap.");
+      return;
+    }
 
-    const bookingData = new URLSearchParams({
-      date: selectedDate || "",
-      time: selectedTime || "",
-      guests: guestCount || "",
-      table: selectedTable || "",
-      code: bookingCode,
-    });
+    try {
+      setLoading(true);
+      setErrorMessage("");
 
-    router.push(
-      `/restaurants/${slug}/booking/success?${bookingData.toString()}`,
-    );
+      const bookingDate = `${selectedDate}T${selectedTime}:00`;
+
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: 1,
+          restaurantId: 1,
+          tableId: Number(selectedTable),
+          bookingDate,
+          guestCount: Number(guestCount),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || "Gagal membuat booking. Silakan coba lagi.",
+        );
+      }
+
+      const bookingCode = `TG-${Date.now().toString().slice(-8)}`;
+
+      const successParams = new URLSearchParams({
+        date: selectedDate,
+        time: selectedTime,
+        guests: guestCount,
+        table: selectedTable,
+        code: bookingCode,
+      });
+
+      router.push(
+        `/restaurants/${slug}/booking/success?${successParams.toString()}`,
+      );
+    } catch (error) {
+      console.error("Booking error:", error);
+
+      setErrorMessage(
+        error instanceof Error ? error.message : "Gagal membuat booking.",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -136,20 +182,29 @@ export default function BookingConfirmationPage() {
             </p>
           </div>
 
+          {/* Error */}
+          {errorMessage && (
+            <div className="mt-4 rounded-xl bg-red-50 p-4">
+              <p className="text-sm font-medium text-red-600">{errorMessage}</p>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="mt-6 space-y-3">
             <button
               type="button"
               onClick={handleConfirm}
-              className="w-full rounded-xl bg-green-500 px-5 py-3.5 font-semibold text-white transition hover:bg-green-600"
+              disabled={loading}
+              className="w-full rounded-xl bg-green-500 px-5 py-3.5 font-semibold text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
-              Konfirmasi Booking
+              {loading ? "Memproses Booking..." : "Konfirmasi Booking"}
             </button>
 
             <button
               type="button"
+              disabled={loading}
               onClick={() => router.push(`/restaurants/${slug}/booking`)}
-              className="w-full rounded-xl border border-gray-200 bg-white px-5 py-3.5 font-semibold text-gray-700 transition hover:bg-gray-50"
+              className="w-full rounded-xl border border-gray-200 bg-white px-5 py-3.5 font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Kembali ke Booking
             </button>
