@@ -73,6 +73,7 @@ export default function BookingsPage() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -137,6 +138,52 @@ export default function BookingsPage() {
     } catch (error) {
       console.error("Logout error:", error);
       setLoggingOut(false);
+    }
+  };
+
+  const handleCancelBooking = async (bookingId: number) => {
+    const confirmed = window.confirm(
+      "Apakah kamu yakin ingin membatalkan booking ini?",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setCancellingId(bookingId);
+
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Gagal membatalkan booking.");
+      }
+
+      setBookings((currentBookings) =>
+        currentBookings.map((booking) =>
+          booking.id === bookingId
+            ? {
+                ...booking,
+                status: "CANCELLED",
+              }
+            : booking,
+        ),
+      );
+    } catch (error) {
+      console.error("Cancel booking error:", error);
+
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : "Terjadi kesalahan saat membatalkan booking.",
+      );
+    } finally {
+      setCancellingId(null);
     }
   };
 
@@ -326,6 +373,22 @@ export default function BookingsPage() {
                         <p className="mt-1 text-sm text-gray-700">
                           {booking.notes}
                         </p>
+                      </div>
+                    )}
+
+                    {/* Cancel Button */}
+                    {booking.status === "PENDING" && (
+                      <div className="mt-5 border-t border-gray-100 pt-5">
+                        <button
+                          type="button"
+                          onClick={() => handleCancelBooking(booking.id)}
+                          disabled={cancellingId === booking.id}
+                          className="w-full rounded-xl border border-red-200 px-5 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                        >
+                          {cancellingId === booking.id
+                            ? "Membatalkan..."
+                            : "Batalkan Booking"}
+                        </button>
                       </div>
                     )}
                   </div>
