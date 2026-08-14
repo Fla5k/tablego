@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Features from "@/components/home/Features";
 import HowItWorks from "@/components/home/HowItWorks";
@@ -28,12 +29,12 @@ export default function Home() {
           </p>
 
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <a
+            <Link
               href="/restaurants"
               className="rounded-xl bg-green-500 px-7 py-3.5 font-semibold text-white transition hover:bg-green-600"
             >
               Cari Restoran
-            </a>
+            </Link>
 
             <a
               href="#how-it-works"
@@ -47,10 +48,13 @@ export default function Home() {
 
       {/* Features */}
       <Features />
+
       {/* HowItWorks */}
       <HowItWorks />
+
       {/* CTA */}
       <CTA />
+
       {/* Footer */}
       <Footer />
     </main>

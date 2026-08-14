@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const footerLinks = {
   Platform: ["Restoran", "Booking", "Pre-Order", "QR Check-In"],
   Perusahaan: ["Tentang Kami", "Karier", "Kontak"],
@@ -11,10 +13,10 @@ export default function Footer() {
         <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div>
-            <a href="/" className="text-2xl font-bold tracking-tight">
+            <Link href="/" className="text-2xl font-bold tracking-tight">
               <span className="text-gray-900">Table</span>
               <span className="text-green-500">Go</span>
-            </a>
+            </Link>
 
             <p className="mt-4 max-w-xs text-sm leading-6 text-gray-600">
               Platform booking restoran yang membantu pelanggan makan tanpa
@@ -25,9 +27,7 @@ export default function Footer() {
           {/* Links */}
           {Object.entries(footerLinks).map(([title, links]) => (
             <div key={title}>
-              <h3 className="text-sm font-semibold text-gray-900">
-                {title}
-              </h3>
+              <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
 
               <ul className="mt-4 space-y-3">
                 {links.map((link) => (

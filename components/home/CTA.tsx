@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function CTA() {
   return (
     <section className="px-6 py-24">
@@ -12,24 +14,24 @@ export default function CTA() {
           </h2>
 
           <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-gray-300">
-            Temukan restoran favoritmu, booking meja, dan pesan makanan
-            sebelum kamu tiba.
+            Temukan restoran favoritmu, booking meja, dan pesan makanan sebelum
+            kamu tiba.
           </p>
 
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <a
+            <Link
               href="/restaurants"
               className="rounded-xl bg-green-500 px-7 py-3.5 font-semibold text-white transition hover:bg-green-600"
             >
               Mulai Booking
-            </a>
+            </Link>
 
-            <a
+            <Link
               href="/register"
               className="rounded-xl border border-gray-700 px-7 py-3.5 font-semibold text-white transition hover:bg-gray-800"
             >
               Buat Akun
-            </a>
+            </Link>
           </div>
         </div>
       </div>
