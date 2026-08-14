@@ -1,17 +1,20 @@
 "use client";
 
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 export default function BookingSuccessPage() {
+  const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
+
+  const slug = params.slug as string;
 
   const selectedDate = searchParams.get("date");
   const selectedTime = searchParams.get("time");
   const guestCount = searchParams.get("guests");
   const selectedTable = searchParams.get("table");
 
-  const bookingCode = searchParams.get("code") || "TG-20260810-001";
+  const bookingCode = searchParams.get("code");
 
   const formattedDate = selectedDate
     ? new Date(`${selectedDate}T00:00:00`).toLocaleDateString("id-ID", {
@@ -62,7 +65,7 @@ export default function BookingSuccessPage() {
           <p className="text-sm font-medium text-green-700">Kode Booking</p>
 
           <p className="mt-2 text-3xl font-bold tracking-widest text-gray-900">
-            {bookingCode}
+            {bookingCode || "Tidak tersedia"}
           </p>
 
           <p className="mt-2 text-xs text-green-600">
@@ -83,6 +86,7 @@ export default function BookingSuccessPage() {
           </div>
 
           <div className="grid gap-6 py-6 sm:grid-cols-2">
+            {/* Date */}
             <div>
               <p className="text-sm text-gray-500">Tanggal</p>
 
@@ -91,6 +95,7 @@ export default function BookingSuccessPage() {
               </p>
             </div>
 
+            {/* Time */}
             <div>
               <p className="text-sm text-gray-500">Waktu</p>
 
@@ -99,6 +104,7 @@ export default function BookingSuccessPage() {
               </p>
             </div>
 
+            {/* Guests */}
             <div>
               <p className="text-sm text-gray-500">Jumlah Tamu</p>
 
@@ -107,6 +113,7 @@ export default function BookingSuccessPage() {
               </p>
             </div>
 
+            {/* Table */}
             <div>
               <p className="text-sm text-gray-500">Meja</p>
 
@@ -117,25 +124,28 @@ export default function BookingSuccessPage() {
           </div>
 
           {/* Status */}
-          <div className="rounded-xl bg-gray-50 p-4">
+          <div className="rounded-xl bg-yellow-50 p-4">
             <p className="text-sm font-medium text-gray-700">Status Booking</p>
 
             <div className="mt-2 flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
+              <span className="h-2.5 w-2.5 rounded-full bg-yellow-500" />
 
-              <span className="text-sm font-semibold text-green-600">
-                Dikonfirmasi
+              <span className="text-sm font-semibold text-yellow-600">
+                Menunggu Konfirmasi
               </span>
             </div>
+
+            <p className="mt-2 text-xs text-gray-500">
+              Booking kamu sudah tersimpan dan sedang menunggu konfirmasi dari
+              restoran.
+            </p>
           </div>
         </div>
 
         {/* Action */}
         <button
           type="button"
-          onClick={() => {
-            window.location.href = `/restaurants/${params.slug}`;
-          }}
+          onClick={() => router.push(`/restaurants/${slug}`)}
           className="mt-6 w-full rounded-xl bg-green-500 px-5 py-3.5 font-semibold text-white transition hover:bg-green-600"
         >
           Kembali ke Restoran
