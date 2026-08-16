@@ -61,7 +61,7 @@ export async function PATCH(
     const body = await request.json();
     const { status } = body;
 
-    const allowedStatuses = ["CONFIRMED", "CANCELLED"];
+    const allowedStatuses = ["CONFIRMED", "CANCELLED", "COMPLETED"];
 
     if (!allowedStatuses.includes(status)) {
       return NextResponse.json(
@@ -94,15 +94,26 @@ export async function PATCH(
     }
 
     // =========================
-    // HANYA PENDING YANG BISA
-    // DIUBAH ADMIN
+    // VALIDASI PERUBAHAN STATUS
+    // =========================
+    //
+    // PENDING    -> CONFIRMED
+    // PENDING    -> CANCELLED
+    // CONFIRMED  -> COMPLETED
+    //
+    // Perubahan status lainnya ditolak.
     // =========================
 
-    if (booking.status !== "PENDING") {
+    const isValidTransition =
+      (booking.status === "PENDING" &&
+        (status === "CONFIRMED" || status === "CANCELLED")) ||
+      (booking.status === "CONFIRMED" && status === "COMPLETED");
+
+    if (!isValidTransition) {
       return NextResponse.json(
         {
           success: false,
-          message: "Booking ini sudah diproses.",
+          message: `Booking dengan status ${booking.status} tidak dapat diubah menjadi ${status}.`,
         },
         { status: 400 },
       );
@@ -145,13 +156,19 @@ export async function PATCH(
       },
     });
 
+    // =========================
+    // RESPONSE
+    // =========================
+
     return NextResponse.json(
       {
         success: true,
         message:
           status === "CONFIRMED"
             ? "Booking berhasil dikonfirmasi."
-            : "Booking berhasil dibatalkan.",
+            : status === "COMPLETED"
+              ? "Booking berhasil diselesaikan."
+              : "Booking berhasil dibatalkan.",
         booking: updatedBooking,
       },
       { status: 200 },

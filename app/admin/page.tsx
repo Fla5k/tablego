@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -27,6 +27,16 @@ type Booking = {
     id: number;
     tableNumber: string;
     capacity: number;
+  };
+};
+
+type Restaurant = {
+  id: number;
+  name: string;
+  address: string;
+  _count: {
+    tables: number;
+    bookings: number;
   };
 };
 
@@ -84,6 +94,8 @@ export default function AdminPage() {
 
   const [admin, setAdmin] = useState<AdminUser | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
@@ -112,11 +124,17 @@ export default function AdminPage() {
 
         setAdmin(userData.user);
 
-        const bookingResponse = await fetch("/api/admin/bookings", {
-          credentials: "include",
-        });
+        const [bookingResponse, restaurantResponse] = await Promise.all([
+          fetch("/api/admin/bookings", {
+            credentials: "include",
+          }),
+          fetch("/api/admin/restaurants", {
+            credentials: "include",
+          }),
+        ]);
 
         const bookingData = await bookingResponse.json();
+        const restaurantData = await restaurantResponse.json();
 
         if (!bookingResponse.ok || !bookingData.success) {
           throw new Error(
@@ -124,7 +142,14 @@ export default function AdminPage() {
           );
         }
 
+        if (!restaurantResponse.ok || !restaurantData.success) {
+          throw new Error(
+            restaurantData.message || "Gagal mengambil data restoran.",
+          );
+        }
+
         setBookings(bookingData.bookings);
+        setRestaurants(restaurantData.restaurants);
       } catch (error) {
         console.error("Admin dashboard error:", error);
 
@@ -161,17 +186,36 @@ export default function AdminPage() {
     }
   };
 
-  const pendingBookings = bookings.filter(
-    (booking) => booking.status === "PENDING",
+  const pendingBookings = useMemo(
+    () => bookings.filter((booking) => booking.status === "PENDING"),
+    [bookings],
   );
 
-  const confirmedBookings = bookings.filter(
-    (booking) => booking.status === "CONFIRMED",
+  const confirmedBookings = useMemo(
+    () => bookings.filter((booking) => booking.status === "CONFIRMED"),
+    [bookings],
   );
 
-  const cancelledBookings = bookings.filter(
-    (booking) => booking.status === "CANCELLED",
+  const cancelledBookings = useMemo(
+    () => bookings.filter((booking) => booking.status === "CANCELLED"),
+    [bookings],
   );
+
+  const completedBookings = useMemo(
+    () => bookings.filter((booking) => booking.status === "COMPLETED"),
+    [bookings],
+  );
+
+  const totalTables = useMemo(
+    () =>
+      restaurants.reduce(
+        (total, restaurant) => total + restaurant._count.tables,
+        0,
+      ),
+    [restaurants],
+  );
+
+  const recentBookings = useMemo(() => bookings.slice(0, 5), [bookings]);
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -206,42 +250,12 @@ export default function AdminPage() {
           </p>
 
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-gray-900">
-            Kelola Booking
+            Dashboard TableGo
           </h1>
 
           <p className="mt-2 text-gray-600">
-            Pantau semua reservasi yang masuk ke TableGo.
+            Pantau restoran, meja, dan reservasi TableGo dari satu tempat.
           </p>
-        </div>
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">Total Booking</p>
-            <p className="mt-2 text-3xl font-bold text-gray-900">
-              {bookings.length}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-yellow-100 bg-yellow-50 p-5">
-            <p className="text-sm text-yellow-700">Menunggu</p>
-            <p className="mt-2 text-3xl font-bold text-yellow-800">
-              {pendingBookings.length}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-green-100 bg-green-50 p-5">
-            <p className="text-sm text-green-700">Dikonfirmasi</p>
-            <p className="mt-2 text-3xl font-bold text-green-800">
-              {confirmedBookings.length}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-red-100 bg-red-50 p-5">
-            <p className="text-sm text-red-700">Dibatalkan</p>
-            <p className="mt-2 text-3xl font-bold text-red-800">
-              {cancelledBookings.length}
-            </p>
-          </div>
         </div>
 
         {loading && (
@@ -253,132 +267,299 @@ export default function AdminPage() {
         {!loading && errorMessage && (
           <div className="mt-8 rounded-2xl border border-red-100 bg-red-50 p-6">
             <p className="font-semibold text-red-700">{errorMessage}</p>
+
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="mt-4 rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700"
+            >
+              Coba Lagi
+            </button>
           </div>
         )}
 
         {!loading && !errorMessage && (
-          <section className="mt-8">
-            <div className="mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Semua Booking</h2>
+          <>
+            <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Total Restoran</p>
 
-              <p className="mt-1 text-sm text-gray-500">
-                Booking terbaru ditampilkan terlebih dahulu.
-              </p>
-            </div>
+                    <p className="mt-2 text-3xl font-bold text-gray-900">
+                      {restaurants.length}
+                    </p>
+                  </div>
 
-            {bookings.length === 0 ? (
-              <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
-                <p className="text-gray-500">Belum ada booking masuk.</p>
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-xl">
+                    🏪
+                  </div>
+                </div>
+
+                <Link
+                  href="/admin/restaurants"
+                  className="mt-4 inline-block text-sm font-semibold text-green-600 hover:text-green-700"
+                >
+                  Kelola Restoran →
+                </Link>
               </div>
-            ) : (
-              <div className="space-y-5">
-                {bookings.map((booking) => {
-                  const status = statusConfig[booking.status];
 
-                  return (
-                    <div
-                      key={booking.id}
-                      className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
-                    >
-                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-                            Booking #{booking.id}
-                          </p>
+              <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Total Meja</p>
 
-                          <h3 className="mt-1 text-xl font-bold text-gray-900">
-                            {booking.user.name}
-                          </h3>
+                    <p className="mt-2 text-3xl font-bold text-gray-900">
+                      {totalTables}
+                    </p>
+                  </div>
 
-                          <p className="mt-1 text-sm text-gray-500">
-                            {booking.user.email}
-                          </p>
-                        </div>
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-xl">
+                    🪑
+                  </div>
+                </div>
 
-                        <span
-                          className={`inline-flex w-fit rounded-full px-3 py-1.5 text-xs font-semibold ${status.className}`}
+                <p className="mt-4 text-sm text-gray-500">
+                  Tersebar di {restaurants.length} restoran
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Total Booking</p>
+
+                    <p className="mt-2 text-3xl font-bold text-gray-900">
+                      {bookings.length}
+                    </p>
+                  </div>
+
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-xl">
+                    📅
+                  </div>
+                </div>
+
+                <Link
+                  href="/admin/bookings"
+                  className="mt-4 inline-block text-sm font-semibold text-green-600 hover:text-green-700"
+                >
+                  Kelola Booking →
+                </Link>
+              </div>
+
+              <div className="rounded-2xl border border-yellow-100 bg-yellow-50 p-5">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm text-yellow-700">
+                      Menunggu Konfirmasi
+                    </p>
+
+                    <p className="mt-2 text-3xl font-bold text-yellow-800">
+                      {pendingBookings.length}
+                    </p>
+                  </div>
+
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-yellow-100 text-xl">
+                    ⏳
+                  </div>
+                </div>
+
+                <Link
+                  href="/admin/bookings"
+                  className="mt-4 inline-block text-sm font-semibold text-yellow-700 hover:text-yellow-800"
+                >
+                  Proses Sekarang →
+                </Link>
+              </div>
+            </section>
+
+            <section className="mt-8 grid gap-4 sm:grid-cols-3">
+              <div className="rounded-2xl border border-green-100 bg-green-50 p-5">
+                <p className="text-sm font-medium text-green-700">
+                  Dikonfirmasi
+                </p>
+
+                <p className="mt-2 text-2xl font-bold text-green-800">
+                  {confirmedBookings.length}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
+                <p className="text-sm font-medium text-blue-700">Selesai</p>
+
+                <p className="mt-2 text-2xl font-bold text-blue-800">
+                  {completedBookings.length}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-red-100 bg-red-50 p-5">
+                <p className="text-sm font-medium text-red-700">Dibatalkan</p>
+
+                <p className="mt-2 text-2xl font-bold text-red-800">
+                  {cancelledBookings.length}
+                </p>
+              </div>
+            </section>
+
+            <section className="mt-8">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Booking Terbaru
+                  </h2>
+
+                  <p className="mt-1 text-sm text-gray-500">
+                    Lima booking terbaru yang masuk ke TableGo.
+                  </p>
+                </div>
+
+                <Link
+                  href="/admin/bookings"
+                  className="text-sm font-semibold text-green-600 hover:text-green-700"
+                >
+                  Lihat semua booking →
+                </Link>
+              </div>
+
+              {recentBookings.length === 0 ? (
+                <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-xl">
+                    📅
+                  </div>
+
+                  <h3 className="mt-4 font-semibold text-gray-900">
+                    Belum ada booking
+                  </h3>
+
+                  <p className="mt-1 text-sm text-gray-500">
+                    Booking baru akan muncul di sini.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                  <div className="divide-y divide-gray-100">
+                    {recentBookings.map((booking) => {
+                      const status = statusConfig[booking.status];
+
+                      return (
+                        <div
+                          key={booking.id}
+                          className="p-5 transition hover:bg-gray-50"
                         >
-                          {status.label}
-                        </span>
-                      </div>
+                          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                  Booking #{booking.id}
+                                </p>
 
-                      <div className="mt-6 grid gap-5 border-t border-gray-100 pt-6 sm:grid-cols-2 lg:grid-cols-4">
-                        <div>
-                          <p className="text-xs font-medium text-gray-400">
-                            Restoran
-                          </p>
+                                <span
+                                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}
+                                >
+                                  {status.label}
+                                </span>
+                              </div>
 
-                          <p className="mt-1 font-semibold text-gray-900">
-                            {booking.restaurant.name}
-                          </p>
-                        </div>
+                              <h3 className="mt-2 font-bold text-gray-900">
+                                {booking.user.name}
+                              </h3>
 
-                        <div>
-                          <p className="text-xs font-medium text-gray-400">
-                            Meja
-                          </p>
+                              <p className="mt-1 text-sm text-gray-500">
+                                {booking.restaurant.name} · Meja{" "}
+                                {booking.table.tableNumber}
+                              </p>
+                            </div>
 
-                          <p className="mt-1 font-semibold text-gray-900">
-                            Meja {booking.table.tableNumber}
-                          </p>
-                        </div>
+                            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:min-w-[420px]">
+                              <div>
+                                <p className="text-xs text-gray-400">Tanggal</p>
 
-                        <div>
-                          <p className="text-xs font-medium text-gray-400">
-                            Tanggal
-                          </p>
+                                <p className="mt-1 text-sm font-semibold text-gray-900">
+                                  {formatDate(booking.bookingDate)}
+                                </p>
+                              </div>
 
-                          <p className="mt-1 text-sm font-semibold text-gray-900">
-                            {formatDate(booking.bookingDate)}
-                          </p>
-                        </div>
+                              <div>
+                                <p className="text-xs text-gray-400">Waktu</p>
 
-                        <div>
-                          <p className="text-xs font-medium text-gray-400">
-                            Waktu
-                          </p>
+                                <p className="mt-1 text-sm font-semibold text-gray-900">
+                                  {formatTime(booking.bookingDate)}
+                                </p>
+                              </div>
 
-                          <p className="mt-1 text-sm font-semibold text-gray-900">
-                            {formatTime(booking.bookingDate)}
-                          </p>
-                        </div>
-                      </div>
+                              <div>
+                                <p className="text-xs text-gray-400">Tamu</p>
 
-                      <div className="mt-5 flex flex-col gap-3 rounded-xl bg-gray-50 p-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <p className="text-xs text-gray-400">Jumlah Tamu</p>
-
-                          <p className="mt-1 font-semibold text-gray-900">
-                            {booking.guestCount} orang
-                          </p>
-                        </div>
-
-                        {booking.user.phone && (
-                          <div>
-                            <p className="text-xs text-gray-400">No. Telepon</p>
-
-                            <p className="mt-1 font-semibold text-gray-900">
-                              {booking.user.phone}
-                            </p>
+                                <p className="mt-1 text-sm font-semibold text-gray-900">
+                                  {booking.guestCount} orang
+                                </p>
+                              </div>
+                            </div>
                           </div>
-                        )}
-
-                        <div>
-                          <p className="text-xs text-gray-400">
-                            Kapasitas Meja
-                          </p>
-
-                          <p className="mt-1 font-semibold text-gray-900">
-                            {booking.table.capacity} orang
-                          </p>
                         </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </section>
+
+            <section className="mt-8">
+              <div className="mb-4">
+                <h2 className="text-xl font-bold text-gray-900">Akses Cepat</h2>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  Kelola bagian utama TableGo.
+                </p>
               </div>
-            )}
-          </section>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <Link
+                  href="/admin/restaurants"
+                  className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-green-200 hover:shadow-md"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-green-50 text-xl">
+                      🏪
+                    </div>
+
+                    <div>
+                      <h3 className="font-bold text-gray-900 group-hover:text-green-600">
+                        Kelola Restoran
+                      </h3>
+
+                      <p className="mt-1 text-sm leading-6 text-gray-500">
+                        Tambahkan, edit, hapus restoran, dan kelola informasi
+                        restoran.
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+
+                <Link
+                  href="/admin/bookings"
+                  className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-green-200 hover:shadow-md"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-green-50 text-xl">
+                      📅
+                    </div>
+
+                    <div>
+                      <h3 className="font-bold text-gray-900 group-hover:text-green-600">
+                        Kelola Booking
+                      </h3>
+
+                      <p className="mt-1 text-sm leading-6 text-gray-500">
+                        Lihat booking masuk dan proses reservasi yang masih
+                        menunggu konfirmasi.
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            </section>
+          </>
         )}
       </div>
     </main>
