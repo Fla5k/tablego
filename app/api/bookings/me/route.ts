@@ -35,6 +35,9 @@ export async function GET() {
       where: {
         userId,
       },
+      orderBy: {
+        bookingDate: "desc",
+      },
       include: {
         restaurant: {
           select: {
@@ -52,9 +55,6 @@ export async function GET() {
           },
         },
       },
-      orderBy: {
-        bookingDate: "asc",
-      },
     });
 
     return NextResponse.json(
@@ -65,7 +65,7 @@ export async function GET() {
       { status: 200 },
     );
   } catch (error) {
-    console.error("Get my bookings error:", error);
+    console.error("Get user bookings error:", error);
 
     return NextResponse.json(
       {

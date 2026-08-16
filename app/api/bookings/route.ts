@@ -1,20 +1,31 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+
+const SESSION_COOKIE = "tablego_session";
 
 export async function POST(request: Request) {
   try {
-    // =========================
-    // CEK SESSION USER
-    // =========================
+    const cookieStore = await cookies();
+    const session = cookieStore.get(SESSION_COOKIE);
 
-    const user = await getCurrentUser();
-
-    if (!user) {
+    if (!session?.value) {
       return NextResponse.json(
         {
           success: false,
-          message: "Kamu harus login terlebih dahulu.",
+          message: "Kamu belum login.",
+        },
+        { status: 401 },
+      );
+    }
+
+    const userId = Number(session.value);
+
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Session tidak valid.",
         },
         { status: 401 },
       );
@@ -22,60 +33,44 @@ export async function POST(request: Request) {
 
     const body = await request.json();
 
-    const {
-      restaurantId,
-      tableId,
-      bookingDate,
-      guestCount,
-      notes,
-    } = body;
-
-    // =========================
-    // VALIDASI DATA
-    // =========================
+    const restaurantId = Number(body.restaurantId);
+    const tableId = Number(body.tableId);
+    const guestCount = Number(body.guestCount);
+    const bookingDate = body.bookingDate;
 
     if (
-      !restaurantId ||
-      !tableId ||
-      !bookingDate ||
-      !guestCount
+      !Number.isInteger(restaurantId) ||
+      restaurantId <= 0 ||
+      !Number.isInteger(tableId) ||
+      tableId <= 0 ||
+      !Number.isInteger(guestCount) ||
+      guestCount <= 0 ||
+      !bookingDate
     ) {
       return NextResponse.json(
         {
           success: false,
-          message: "Data booking belum lengkap.",
+          message: "Data booking tidak lengkap atau tidak valid.",
         },
         { status: 400 },
       );
     }
 
-    const restaurantIdNumber = Number(restaurantId);
-    const tableIdNumber = Number(tableId);
-    const guestCountNumber = Number(guestCount);
-    const selectedBookingDate = new Date(bookingDate);
+    const parsedBookingDate = new Date(bookingDate);
 
-    if (
-      Number.isNaN(restaurantIdNumber) ||
-      Number.isNaN(tableIdNumber) ||
-      Number.isNaN(guestCountNumber) ||
-      Number.isNaN(selectedBookingDate.getTime())
-    ) {
+    if (Number.isNaN(parsedBookingDate.getTime())) {
       return NextResponse.json(
         {
           success: false,
-          message: "Data booking tidak valid.",
+          message: "Tanggal booking tidak valid.",
         },
         { status: 400 },
       );
     }
-
-    // =========================
-    // CEK RESTORAN
-    // =========================
 
     const restaurant = await prisma.restaurant.findUnique({
       where: {
-        id: restaurantIdNumber,
+        id: restaurantId,
       },
     });
 
@@ -89,13 +84,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // =========================
-    // CEK MEJA
-    // =========================
-
-    const table = await prisma.restaurantTable.findUnique({
+    const table = await prisma.restaurantTable.findFirst({
       where: {
-        id: tableIdNumber,
+        id: tableId,
+        restaurantId,
       },
     });
 
@@ -103,28 +95,13 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          message: "Meja tidak ditemukan.",
+          message: "Meja tidak ditemukan di restoran tersebut.",
         },
         { status: 404 },
       );
     }
 
-    // Pastikan meja memang milik restoran yang dipilih
-    if (table.restaurantId !== restaurantIdNumber) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Meja tidak tersedia di restoran tersebut.",
-        },
-        { status: 400 },
-      );
-    }
-
-    // =========================
-    // CEK KAPASITAS MEJA
-    // =========================
-
-    if (guestCountNumber > table.capacity) {
+    if (guestCount > table.capacity) {
       return NextResponse.json(
         {
           success: false,
@@ -134,17 +111,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // =========================
-    // CEK DOUBLE BOOKING
-    // =========================
-
     const existingBooking = await prisma.booking.findFirst({
       where: {
-        restaurantId: restaurantIdNumber,
-        tableId: tableIdNumber,
-        bookingDate: selectedBookingDate,
+        tableId,
+        bookingDate: parsedBookingDate,
         status: {
-          not: "CANCELLED",
+          in: ["PENDING", "CONFIRMED"],
         },
       },
     });
@@ -153,24 +125,24 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          message: `Meja ${table.tableNumber} sudah dibooking pada tanggal dan waktu tersebut.`,
+          message: "Meja tersebut sudah dibooking pada waktu tersebut.",
         },
         { status: 409 },
       );
     }
 
-    // =========================
-    // BUAT BOOKING
-    // =========================
-
     const booking = await prisma.booking.create({
       data: {
-        userId: user.id,
-        restaurantId: restaurantIdNumber,
-        tableId: tableIdNumber,
-        bookingDate: selectedBookingDate,
-        guestCount: guestCountNumber,
-        notes: notes || null,
+        userId,
+        restaurantId,
+        tableId,
+        bookingDate: parsedBookingDate,
+        guestCount,
+        status: "PENDING",
+      },
+      include: {
+        restaurant: true,
+        table: true,
       },
     });
 
@@ -183,7 +155,7 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (error) {
-    console.error("Booking API error:", error);
+    console.error("Create booking error:", error);
 
     return NextResponse.json(
       {

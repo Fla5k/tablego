@@ -1,7 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+
+type Restaurant = {
+  id: number;
+  name: string;
+  address: string;
+};
 
 export default function BookingConfirmationPage() {
   const router = useRouter();
@@ -15,8 +21,44 @@ export default function BookingConfirmationPage() {
   const guestCount = searchParams.get("guests");
   const selectedTable = searchParams.get("table");
 
+  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [loadingRestaurant, setLoadingRestaurant] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    const fetchRestaurant = async () => {
+      try {
+        setLoadingRestaurant(true);
+        setErrorMessage("");
+
+        const response = await fetch(`/api/restaurants/${slug}`);
+        const data = await response.json();
+
+        if (!response.ok || !data.success || !data.restaurant) {
+          throw new Error(data.message || "Gagal mengambil data restoran.");
+        }
+
+        setRestaurant({
+          id: data.restaurant.id,
+          name: data.restaurant.name,
+          address: data.restaurant.address ?? "",
+        });
+      } catch (error) {
+        console.error("Fetch restaurant error:", error);
+
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Gagal mengambil data restoran.",
+        );
+      } finally {
+        setLoadingRestaurant(false);
+      }
+    };
+
+    fetchRestaurant();
+  }, [slug]);
 
   const formattedDate = selectedDate
     ? new Date(`${selectedDate}T00:00:00`).toLocaleDateString("id-ID", {
@@ -32,6 +74,24 @@ export default function BookingConfirmationPage() {
       return;
     }
 
+    if (!restaurant) {
+      setErrorMessage("Data restoran belum tersedia.");
+      return;
+    }
+
+    const tableId = Number(selectedTable);
+    const guestCountNumber = Number(guestCount);
+
+    if (
+      !Number.isInteger(tableId) ||
+      tableId <= 0 ||
+      !Number.isInteger(guestCountNumber) ||
+      guestCountNumber <= 0
+    ) {
+      setErrorMessage("Data meja atau jumlah tamu tidak valid.");
+      return;
+    }
+
     try {
       setLoading(true);
       setErrorMessage("");
@@ -43,24 +103,32 @@ export default function BookingConfirmationPage() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
-          userId: 1,
-          restaurantId: 1,
-          tableId: Number(selectedTable),
+          restaurantId: restaurant.id,
+          tableId,
           bookingDate,
-          guestCount: Number(guestCount),
+          guestCount: guestCountNumber,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok || !data.success) {
+        if (response.status === 401) {
+          router.push(
+            `/login?redirect=${encodeURIComponent(
+              `/restaurants/${slug}/booking/confirmation?${searchParams.toString()}`,
+            )}`,
+          );
+          return;
+        }
+
         throw new Error(
           data.message || "Gagal membuat booking. Silakan coba lagi.",
         );
       }
 
-      // ID booking berasal dari database
       const bookingCode = `TG-${String(data.booking.id).padStart(6, "0")}`;
 
       const successParams = new URLSearchParams({
@@ -89,10 +157,14 @@ export default function BookingConfirmationPage() {
     <main className="min-h-screen bg-gray-50">
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <div className="text-2xl font-bold tracking-tight">
+          <button
+            type="button"
+            onClick={() => router.push("/restaurants")}
+            className="text-2xl font-bold tracking-tight"
+          >
             <span className="text-gray-900">Table</span>
             <span className="text-green-500">Go</span>
-          </div>
+          </button>
 
           <span className="text-sm text-gray-500">Konfirmasi Booking</span>
         </div>
@@ -118,85 +190,97 @@ export default function BookingConfirmationPage() {
         </div>
 
         <div className="mt-10 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="border-b border-gray-100 pb-6">
-            <p className="text-sm text-gray-500">Restoran</p>
-
-            <h2 className="mt-2 text-2xl font-bold text-gray-900">
-              Kopi Senja
-            </h2>
-
-            <p className="mt-1 text-sm text-gray-500">Bandung, Jawa Barat</p>
-          </div>
-
-          <div className="grid gap-6 py-6 sm:grid-cols-2">
-            <div>
-              <p className="text-sm text-gray-500">Tanggal</p>
-
-              <p className="mt-1 font-semibold text-gray-900">
-                {formattedDate}
-              </p>
+          {loadingRestaurant ? (
+            <div className="py-10 text-center">
+              <p className="text-sm text-gray-500">Memuat data restoran...</p>
             </div>
+          ) : (
+            <>
+              <div className="border-b border-gray-100 pb-6">
+                <p className="text-sm text-gray-500">Restoran</p>
 
-            <div>
-              <p className="text-sm text-gray-500">Waktu</p>
+                <h2 className="mt-2 text-2xl font-bold text-gray-900">
+                  {restaurant?.name || "Restoran tidak ditemukan"}
+                </h2>
 
-              <p className="mt-1 font-semibold text-gray-900">
-                {selectedTime || "Belum dipilih"}
-              </p>
-            </div>
+                <p className="mt-1 text-sm text-gray-500">
+                  {restaurant?.address || "Alamat tidak tersedia"}
+                </p>
+              </div>
 
-            <div>
-              <p className="text-sm text-gray-500">Jumlah Tamu</p>
+              <div className="grid gap-6 py-6 sm:grid-cols-2">
+                <div>
+                  <p className="text-sm text-gray-500">Tanggal</p>
 
-              <p className="mt-1 font-semibold text-gray-900">
-                {guestCount || "0"} orang
-              </p>
-            </div>
+                  <p className="mt-1 font-semibold text-gray-900">
+                    {formattedDate}
+                  </p>
+                </div>
 
-            <div>
-              <p className="text-sm text-gray-500">Meja</p>
+                <div>
+                  <p className="text-sm text-gray-500">Waktu</p>
 
-              <p className="mt-1 font-semibold text-green-600">
-                {selectedTable || "Belum dipilih"}
-              </p>
-            </div>
-          </div>
+                  <p className="mt-1 font-semibold text-gray-900">
+                    {selectedTime || "Belum dipilih"}
+                  </p>
+                </div>
 
-          <div className="rounded-xl bg-green-50 p-4">
-            <p className="text-sm font-medium text-green-700">
-              Data booking sudah siap dikonfirmasi.
-            </p>
+                <div>
+                  <p className="text-sm text-gray-500">Jumlah Tamu</p>
 
-            <p className="mt-1 text-sm text-green-600">
-              Pastikan tanggal, waktu, jumlah tamu, dan meja sudah sesuai.
-            </p>
-          </div>
+                  <p className="mt-1 font-semibold text-gray-900">
+                    {guestCount || "0"} orang
+                  </p>
+                </div>
 
-          {errorMessage && (
-            <div className="mt-4 rounded-xl bg-red-50 p-4">
-              <p className="text-sm font-medium text-red-600">{errorMessage}</p>
-            </div>
+                <div>
+                  <p className="text-sm text-gray-500">Meja</p>
+
+                  <p className="mt-1 font-semibold text-green-600">
+                    {selectedTable ? `Meja ${selectedTable}` : "Belum dipilih"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-green-50 p-4">
+                <p className="text-sm font-medium text-green-700">
+                  Data booking sudah siap dikonfirmasi.
+                </p>
+
+                <p className="mt-1 text-sm text-green-600">
+                  Pastikan tanggal, waktu, jumlah tamu, dan meja sudah sesuai.
+                </p>
+              </div>
+
+              {errorMessage && (
+                <div className="mt-4 rounded-xl bg-red-50 p-4">
+                  <p className="text-sm font-medium text-red-600">
+                    {errorMessage}
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-6 space-y-3">
+                <button
+                  type="button"
+                  onClick={handleConfirm}
+                  disabled={loading || !restaurant}
+                  className="w-full rounded-xl bg-green-500 px-5 py-3.5 font-semibold text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-300"
+                >
+                  {loading ? "Memproses Booking..." : "Konfirmasi Booking"}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => router.push(`/restaurants/${slug}/booking`)}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-5 py-3.5 font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Kembali ke Booking
+                </button>
+              </div>
+            </>
           )}
-
-          <div className="mt-6 space-y-3">
-            <button
-              type="button"
-              onClick={handleConfirm}
-              disabled={loading}
-              className="w-full rounded-xl bg-green-500 px-5 py-3.5 font-semibold text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-300"
-            >
-              {loading ? "Memproses Booking..." : "Konfirmasi Booking"}
-            </button>
-
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => router.push(`/restaurants/${slug}/booking`)}
-              className="w-full rounded-xl border border-gray-200 bg-white px-5 py-3.5 font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Kembali ke Booking
-            </button>
-          </div>
         </div>
 
         <p className="mt-6 text-center text-xs text-gray-400">

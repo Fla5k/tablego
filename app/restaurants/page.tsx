@@ -36,13 +36,11 @@ export default function RestaurantsPage() {
       {/* Navbar */}
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          {/* Logo */}
           <Link href="/" className="text-2xl font-bold tracking-tight">
             <span className="text-gray-900">Table</span>
             <span className="text-green-500">Go</span>
           </Link>
 
-          {/* Navigation */}
           <nav className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/"

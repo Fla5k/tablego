@@ -189,16 +189,13 @@ export default function BookingsPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      {/* Navbar */}
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          {/* Logo */}
           <Link href="/" className="text-2xl font-bold tracking-tight">
             <span className="text-gray-900">Table</span>
             <span className="text-green-500">Go</span>
           </Link>
 
-          {/* Navigation */}
           <div className="flex items-center gap-3">
             <Link
               href="/restaurants"
@@ -232,9 +229,7 @@ export default function BookingsPage() {
         </div>
       </header>
 
-      {/* Content */}
       <div className="mx-auto max-w-5xl px-6 py-12">
-        {/* Heading */}
         <div>
           <p className="text-sm font-semibold uppercase tracking-wider text-green-500">
             TableGo
@@ -249,14 +244,12 @@ export default function BookingsPage() {
           </p>
         </div>
 
-        {/* Loading */}
         {loading && (
           <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
             <p className="text-sm text-gray-500">Memuat data booking...</p>
           </div>
         )}
 
-        {/* Error */}
         {!loading && errorMessage && (
           <div className="mt-8 rounded-2xl border border-red-100 bg-red-50 p-6">
             <p className="font-semibold text-red-700">{errorMessage}</p>
@@ -270,7 +263,6 @@ export default function BookingsPage() {
           </div>
         )}
 
-        {/* Empty */}
         {!loading && !errorMessage && bookings.length === 0 && (
           <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-50 text-2xl">
@@ -294,7 +286,6 @@ export default function BookingsPage() {
           </div>
         )}
 
-        {/* Booking List */}
         {!loading && !errorMessage && bookings.length > 0 && (
           <div className="mt-8 space-y-5">
             {bookings.map((booking) => {
@@ -306,7 +297,6 @@ export default function BookingsPage() {
                   className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
                 >
                   <div className="p-6">
-                    {/* Top */}
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
@@ -329,7 +319,6 @@ export default function BookingsPage() {
                       </span>
                     </div>
 
-                    {/* Details */}
                     <div className="mt-6 grid gap-4 border-t border-gray-100 pt-6 sm:grid-cols-3">
                       <div>
                         <p className="text-xs font-medium text-gray-400">
@@ -363,7 +352,6 @@ export default function BookingsPage() {
                       </div>
                     </div>
 
-                    {/* Notes */}
                     {booking.notes && (
                       <div className="mt-5 rounded-xl bg-gray-50 p-4">
                         <p className="text-xs font-medium text-gray-400">
@@ -376,7 +364,6 @@ export default function BookingsPage() {
                       </div>
                     )}
 
-                    {/* Cancel Button */}
                     {booking.status === "PENDING" && (
                       <div className="mt-5 border-t border-gray-100 pt-5">
                         <button
