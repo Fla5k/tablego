@@ -49,8 +49,19 @@ export async function getCurrentUser() {
       name: true,
       email: true,
       phone: true,
+      role: true,
     },
   });
+
+  return user;
+}
+
+export async function getCurrentAdmin() {
+  const user = await getCurrentUser();
+
+  if (!user || user.role !== "ADMIN") {
+    return null;
+  }
 
   return user;
 }
