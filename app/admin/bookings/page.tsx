@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -37,6 +37,8 @@ type AdminUser = {
   phone: string | null;
   role: "ADMIN";
 };
+
+type StatusFilter = "ALL" | BookingStatus;
 
 const statusConfig: Record<
   BookingStatus,
@@ -79,6 +81,16 @@ function formatTime(dateString: string) {
   }).format(new Date(dateString));
 }
 
+function getDateInputValue(dateString: string) {
+  const date = new Date(dateString);
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 export default function AdminBookingsPage() {
   const router = useRouter();
 
@@ -88,9 +100,24 @@ export default function AdminBookingsPage() {
   const [processingId, setProcessingId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
 
+  // =========================
+  // FILTER
+  // =========================
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [dateFilter, setDateFilter] = useState("");
+
+  // =========================
+  // FETCH DATA
+  // =========================
+
   useEffect(() => {
     async function fetchAdminData() {
       try {
+        setLoading(true);
+        setErrorMessage("");
+
         const userResponse = await fetch("/api/auth/me", {
           method: "GET",
           credentials: "include",
@@ -139,6 +166,10 @@ export default function AdminBookingsPage() {
 
     fetchAdminData();
   }, [router]);
+
+  // =========================
+  // UPDATE STATUS
+  // =========================
 
   const handleUpdateStatus = async (
     bookingId: number,
@@ -202,6 +233,10 @@ export default function AdminBookingsPage() {
     }
   };
 
+  // =========================
+  // LOGOUT
+  // =========================
+
   const handleLogout = async () => {
     try {
       const response = await fetch("/api/auth/logout", {
@@ -219,6 +254,37 @@ export default function AdminBookingsPage() {
     }
   };
 
+  // =========================
+  // FILTERED BOOKINGS
+  // =========================
+
+  const filteredBookings = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    return bookings.filter((booking) => {
+      const matchesSearch =
+        !query ||
+        String(booking.id).includes(query) ||
+        booking.user.name.toLowerCase().includes(query) ||
+        booking.user.email.toLowerCase().includes(query) ||
+        (booking.user.phone || "").toLowerCase().includes(query) ||
+        booking.restaurant.name.toLowerCase().includes(query) ||
+        booking.table.tableNumber.toLowerCase().includes(query);
+
+      const matchesStatus =
+        statusFilter === "ALL" || booking.status === statusFilter;
+
+      const matchesDate =
+        !dateFilter || getDateInputValue(booking.bookingDate) === dateFilter;
+
+      return matchesSearch && matchesStatus && matchesDate;
+    });
+  }, [bookings, searchQuery, statusFilter, dateFilter]);
+
+  // =========================
+  // COUNTERS
+  // =========================
+
   const pendingCount = bookings.filter(
     (booking) => booking.status === "PENDING",
   ).length;
@@ -235,13 +301,25 @@ export default function AdminBookingsPage() {
     (booking) => booking.status === "CANCELLED",
   ).length;
 
+  const resetFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("ALL");
+    setDateFilter("");
+  };
+
+  const hasActiveFilters =
+    searchQuery.trim() !== "" || statusFilter !== "ALL" || dateFilter !== "";
+
   return (
     <main className="min-h-screen bg-gray-50">
+      {/* HEADER */}
+
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
           <Link href="/" className="text-2xl font-bold tracking-tight">
             <span className="text-gray-900">Table</span>
             <span className="text-green-500">Go</span>
+
             <span className="ml-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
               Admin
             </span>
@@ -266,6 +344,8 @@ export default function AdminBookingsPage() {
       </header>
 
       <div className="mx-auto max-w-7xl px-6 py-12">
+        {/* TITLE */}
+
         <div>
           <p className="text-sm font-semibold uppercase tracking-wider text-green-500">
             TableGo Admin
@@ -279,6 +359,8 @@ export default function AdminBookingsPage() {
             Pantau dan proses seluruh booking restoran.
           </p>
         </div>
+
+        {/* SUMMARY */}
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -316,17 +398,146 @@ export default function AdminBookingsPage() {
           </div>
         </div>
 
+        {/* FILTER */}
+
+        {!loading && !errorMessage && bookings.length > 0 && (
+          <section className="mt-8 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-1">
+              <h2 className="font-bold text-gray-900">Filter Booking</h2>
+
+              <p className="text-sm text-gray-500">
+                Cari dan filter booking berdasarkan customer, restoran, meja,
+                status, atau tanggal.
+              </p>
+            </div>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-[1.5fr_1fr_1fr_auto]">
+              {/* SEARCH */}
+
+              <div>
+                <label
+                  htmlFor="booking-search"
+                  className="text-xs font-semibold uppercase tracking-wider text-gray-500"
+                >
+                  Cari Booking
+                </label>
+
+                <input
+                  id="booking-search"
+                  type="text"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Nama, ID, restoran, atau meja..."
+                  className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                />
+              </div>
+
+              {/* STATUS */}
+
+              <div>
+                <label
+                  htmlFor="status-filter"
+                  className="text-xs font-semibold uppercase tracking-wider text-gray-500"
+                >
+                  Status
+                </label>
+
+                <select
+                  id="status-filter"
+                  value={statusFilter}
+                  onChange={(event) =>
+                    setStatusFilter(event.target.value as StatusFilter)
+                  }
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                >
+                  <option value="ALL">Semua Status</option>
+                  <option value="PENDING">Menunggu</option>
+                  <option value="CONFIRMED">Dikonfirmasi</option>
+                  <option value="COMPLETED">Selesai</option>
+                  <option value="CANCELLED">Dibatalkan</option>
+                </select>
+              </div>
+
+              {/* DATE */}
+
+              <div>
+                <label
+                  htmlFor="date-filter"
+                  className="text-xs font-semibold uppercase tracking-wider text-gray-500"
+                >
+                  Tanggal
+                </label>
+
+                <input
+                  id="date-filter"
+                  type="date"
+                  value={dateFilter}
+                  onChange={(event) => setDateFilter(event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                />
+              </div>
+
+              {/* RESET */}
+
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  disabled={!hasActiveFilters}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 lg:w-auto"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-2 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-gray-500">
+                Menampilkan{" "}
+                <span className="font-semibold text-gray-900">
+                  {filteredBookings.length}
+                </span>{" "}
+                dari{" "}
+                <span className="font-semibold text-gray-900">
+                  {bookings.length}
+                </span>{" "}
+                booking
+              </p>
+
+              {hasActiveFilters && (
+                <p className="text-xs font-medium text-green-600">
+                  Filter sedang aktif
+                </p>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* LOADING */}
+
         {loading && (
           <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
             <p className="text-sm text-gray-500">Memuat data booking...</p>
           </div>
         )}
 
+        {/* ERROR */}
+
         {!loading && errorMessage && (
           <div className="mt-8 rounded-2xl border border-red-100 bg-red-50 p-6">
             <p className="font-semibold text-red-700">{errorMessage}</p>
+
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="mt-4 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700"
+            >
+              Coba Lagi
+            </button>
           </div>
         )}
+
+        {/* EMPTY */}
 
         {!loading && !errorMessage && bookings.length === 0 && (
           <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
@@ -344,9 +555,40 @@ export default function AdminBookingsPage() {
           </div>
         )}
 
-        {!loading && !errorMessage && bookings.length > 0 && (
+        {/* FILTER EMPTY */}
+
+        {!loading &&
+          !errorMessage &&
+          bookings.length > 0 &&
+          filteredBookings.length === 0 && (
+            <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 text-2xl">
+                🔎
+              </div>
+
+              <h2 className="mt-5 text-xl font-bold text-gray-900">
+                Booking tidak ditemukan
+              </h2>
+
+              <p className="mt-2 text-sm text-gray-500">
+                Tidak ada booking yang sesuai dengan filter yang dipilih.
+              </p>
+
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="mt-5 rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"
+              >
+                Reset Filter
+              </button>
+            </div>
+          )}
+
+        {/* BOOKING LIST */}
+
+        {!loading && !errorMessage && filteredBookings.length > 0 && (
           <div className="mt-8 space-y-5">
-            {bookings.map((booking) => {
+            {filteredBookings.map((booking) => {
               const status = statusConfig[booking.status];
               const isProcessing = processingId === booking.id;
 
@@ -356,6 +598,8 @@ export default function AdminBookingsPage() {
                   className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
                 >
                   <div className="p-6">
+                    {/* BOOKING HEADER */}
+
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
@@ -378,6 +622,8 @@ export default function AdminBookingsPage() {
                         {status.label}
                       </span>
                     </div>
+
+                    {/* BOOKING DETAIL */}
 
                     <div className="mt-6 grid gap-5 border-t border-gray-100 pt-6 md:grid-cols-4">
                       <div>
@@ -430,6 +676,8 @@ export default function AdminBookingsPage() {
                       </div>
                     </div>
 
+                    {/* NOTES */}
+
                     {booking.notes && (
                       <div className="mt-5 rounded-xl bg-gray-50 p-4">
                         <p className="text-xs font-medium text-gray-400">
@@ -441,6 +689,8 @@ export default function AdminBookingsPage() {
                         </p>
                       </div>
                     )}
+
+                    {/* PENDING ACTIONS */}
 
                     {booking.status === "PENDING" && (
                       <div className="mt-6 flex flex-col gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:justify-end">
@@ -468,8 +718,21 @@ export default function AdminBookingsPage() {
                       </div>
                     )}
 
+                    {/* CONFIRMED ACTION */}
+
                     {booking.status === "CONFIRMED" && (
                       <div className="mt-6 flex flex-col gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:justify-end">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleUpdateStatus(booking.id, "CANCELLED")
+                          }
+                          disabled={isProcessing}
+                          className="rounded-xl border border-red-200 px-5 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isProcessing ? "Memproses..." : "Batalkan Booking"}
+                        </button>
+
                         <button
                           type="button"
                           onClick={() =>
@@ -480,6 +743,37 @@ export default function AdminBookingsPage() {
                         >
                           {isProcessing ? "Memproses..." : "Selesaikan Booking"}
                         </button>
+                      </div>
+                    )}
+
+                    {/* FINAL STATUS */}
+
+                    {booking.status === "COMPLETED" && (
+                      <div className="mt-6 border-t border-gray-100 pt-5">
+                        <div className="rounded-xl bg-blue-50 p-4">
+                          <p className="text-sm font-semibold text-blue-700">
+                            Booking telah selesai.
+                          </p>
+
+                          <p className="mt-1 text-xs text-blue-600">
+                            Meja sudah dapat digunakan kembali untuk booking
+                            lain.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {booking.status === "CANCELLED" && (
+                      <div className="mt-6 border-t border-gray-100 pt-5">
+                        <div className="rounded-xl bg-red-50 p-4">
+                          <p className="text-sm font-semibold text-red-700">
+                            Booking telah dibatalkan.
+                          </p>
+
+                          <p className="mt-1 text-xs text-red-600">
+                            Meja sudah tersedia kembali.
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>
