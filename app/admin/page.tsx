@@ -98,7 +98,6 @@ export default function AdminPage() {
 
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     async function fetchAdminData() {
@@ -108,6 +107,7 @@ export default function AdminPage() {
 
         const userResponse = await fetch("/api/auth/me", {
           credentials: "include",
+          cache: "no-store",
         });
 
         const userData = await userResponse.json();
@@ -166,26 +166,6 @@ export default function AdminPage() {
     fetchAdminData();
   }, [router]);
 
-  const handleLogout = async () => {
-    try {
-      setLoggingOut(true);
-
-      const response = await fetch("/api/auth/logout", {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error("Logout gagal.");
-      }
-
-      router.push("/login");
-      router.refresh();
-    } catch (error) {
-      console.error("Admin logout error:", error);
-      setLoggingOut(false);
-    }
-  };
-
   const pendingBookings = useMemo(
     () => bookings.filter((booking) => booking.status === "PENDING"),
     [bookings],
@@ -219,30 +199,6 @@ export default function AdminPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <Link href="/admin" className="text-2xl font-bold tracking-tight">
-            <span className="text-gray-900">Table</span>
-            <span className="text-green-500">Go</span>
-          </Link>
-
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm font-medium text-gray-700 sm:block">
-              Admin: {admin?.name || "Loading..."}
-            </span>
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              disabled={loggingOut}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loggingOut ? "Keluar..." : "Keluar"}
-            </button>
-          </div>
-        </div>
-      </header>
-
       <div className="mx-auto max-w-7xl px-6 py-10">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wider text-green-500">
