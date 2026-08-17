@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { restaurants } from "@/lib/restaurants";
 import { notFound } from "next/navigation";
+import UserNavbar from "@/components/layout/UserNavbar";
 
 interface RestaurantDetailPageProps {
   params: Promise<{
@@ -12,9 +14,7 @@ export default async function RestaurantDetailPage({
 }: RestaurantDetailPageProps) {
   const { slug } = await params;
 
-  const restaurant = restaurants.find(
-    (restaurant) => restaurant.slug === slug
-  );
+  const restaurant = restaurants.find((restaurant) => restaurant.slug === slug);
 
   if (!restaurant) {
     notFound();
@@ -22,6 +22,8 @@ export default async function RestaurantDetailPage({
 
   return (
     <main className="min-h-screen bg-gray-50">
+      <UserNavbar />
+
       {/* Hero Image */}
       <section className="relative h-[400px] overflow-hidden">
         <img
@@ -56,7 +58,7 @@ export default async function RestaurantDetailPage({
           {/* Main */}
           <div className="space-y-8">
             {/* About */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-8">
+            <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
               <h2 className="text-2xl font-bold text-gray-900">
                 Tentang Restoran
               </h2>
@@ -67,7 +69,7 @@ export default async function RestaurantDetailPage({
             </div>
 
             {/* Opening Hours */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-8">
+            <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
               <h2 className="text-2xl font-bold text-gray-900">
                 Jam Operasional
               </h2>
@@ -75,6 +77,7 @@ export default async function RestaurantDetailPage({
               <div className="mt-5 space-y-3">
                 <div className="flex justify-between border-b border-gray-100 pb-3">
                   <span className="text-gray-600">Senin - Jumat</span>
+
                   <span className="font-medium text-gray-900">
                     09:00 - 22:00
                   </span>
@@ -82,6 +85,7 @@ export default async function RestaurantDetailPage({
 
                 <div className="flex justify-between">
                   <span className="text-gray-600">Sabtu - Minggu</span>
+
                   <span className="font-medium text-gray-900">
                     08:00 - 23:00
                   </span>
@@ -90,51 +94,48 @@ export default async function RestaurantDetailPage({
             </div>
 
             {/* Menu */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-8">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Menu Populer
-              </h2>
+            <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+              <h2 className="text-2xl font-bold text-gray-900">Menu Populer</h2>
 
               <div className="mt-5 divide-y divide-gray-100">
-                <div className="flex items-center justify-between py-4">
+                <div className="flex items-center justify-between gap-6 py-4">
                   <div>
-                    <h3 className="font-medium text-gray-900">
-                      Cappuccino
-                    </h3>
+                    <h3 className="font-medium text-gray-900">Cappuccino</h3>
+
                     <p className="mt-1 text-sm text-gray-500">
                       Espresso dengan susu creamy
                     </p>
                   </div>
 
-                  <span className="font-semibold text-gray-900">
+                  <span className="shrink-0 font-semibold text-gray-900">
                     Rp20.000
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between py-4">
+                <div className="flex items-center justify-between gap-6 py-4">
                   <div>
                     <h3 className="font-medium text-gray-900">Pasta</h3>
+
                     <p className="mt-1 text-sm text-gray-500">
                       Pasta dengan saus pilihan
                     </p>
                   </div>
 
-                  <span className="font-semibold text-gray-900">
+                  <span className="shrink-0 font-semibold text-gray-900">
                     Rp35.000
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between py-4">
+                <div className="flex items-center justify-between gap-6 py-4">
                   <div>
-                    <h3 className="font-medium text-gray-900">
-                      Cheesecake
-                    </h3>
+                    <h3 className="font-medium text-gray-900">Cheesecake</h3>
+
                     <p className="mt-1 text-sm text-gray-500">
                       Cheesecake lembut dengan topping buah
                     </p>
                   </div>
 
-                  <span className="font-semibold text-gray-900">
+                  <span className="shrink-0 font-semibold text-gray-900">
                     Rp25.000
                   </span>
                 </div>
@@ -144,9 +145,9 @@ export default async function RestaurantDetailPage({
 
           {/* Booking Card */}
           <aside>
-            <div className="sticky top-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-              <p className="text-sm text-gray-500">
-                Mau makan di sini?
+            <div className="sticky top-24 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+              <p className="text-sm font-medium text-green-600">
+                Reservasi Restoran
               </p>
 
               <h2 className="mt-2 text-xl font-bold text-gray-900">
@@ -154,15 +155,16 @@ export default async function RestaurantDetailPage({
               </h2>
 
               <p className="mt-3 text-sm leading-6 text-gray-600">
-                Pilih waktu kedatangan dan pesan makanan sebelum kamu tiba.
+                Pilih tanggal, waktu, jumlah tamu, dan meja yang tersedia
+                sebelum datang ke restoran.
               </p>
 
-              <a
+              <Link
                 href={`/restaurants/${restaurant.slug}/booking`}
                 className="mt-6 block rounded-xl bg-green-500 px-5 py-3.5 text-center font-semibold text-white transition hover:bg-green-600"
               >
                 Booking Sekarang
-              </a>
+              </Link>
             </div>
           </aside>
         </div>

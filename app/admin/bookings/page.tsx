@@ -142,9 +142,14 @@ export default function AdminBookingsPage() {
 
   const handleUpdateStatus = async (
     bookingId: number,
-    status: "CONFIRMED" | "CANCELLED",
+    status: "CONFIRMED" | "CANCELLED" | "COMPLETED",
   ) => {
-    const action = status === "CONFIRMED" ? "mengonfirmasi" : "membatalkan";
+    const action =
+      status === "CONFIRMED"
+        ? "mengonfirmasi"
+        : status === "CANCELLED"
+          ? "membatalkan"
+          : "menyelesaikan";
 
     const confirmed = window.confirm(
       `Apakah kamu yakin ingin ${action} booking #${bookingId}?`,
@@ -222,6 +227,10 @@ export default function AdminBookingsPage() {
     (booking) => booking.status === "CONFIRMED",
   ).length;
 
+  const completedCount = bookings.filter(
+    (booking) => booking.status === "COMPLETED",
+  ).length;
+
   const cancelledCount = bookings.filter(
     (booking) => booking.status === "CANCELLED",
   ).length;
@@ -271,7 +280,7 @@ export default function AdminBookingsPage() {
           </p>
         </div>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <p className="text-sm font-medium text-gray-500">
               Menunggu Konfirmasi
@@ -287,6 +296,14 @@ export default function AdminBookingsPage() {
 
             <p className="mt-2 text-3xl font-bold text-green-600">
               {confirmedCount}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <p className="text-sm font-medium text-gray-500">Selesai</p>
+
+            <p className="mt-2 text-3xl font-bold text-blue-600">
+              {completedCount}
             </p>
           </div>
 
@@ -447,6 +464,21 @@ export default function AdminBookingsPage() {
                           className="rounded-xl bg-green-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-300"
                         >
                           {isProcessing ? "Memproses..." : "Konfirmasi Booking"}
+                        </button>
+                      </div>
+                    )}
+
+                    {booking.status === "CONFIRMED" && (
+                      <div className="mt-6 flex flex-col gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:justify-end">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleUpdateStatus(booking.id, "COMPLETED")
+                          }
+                          disabled={isProcessing}
+                          className="rounded-xl bg-blue-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-gray-300"
+                        >
+                          {isProcessing ? "Memproses..." : "Selesaikan Booking"}
                         </button>
                       </div>
                     )}

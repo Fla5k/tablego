@@ -68,83 +68,115 @@ export async function POST(request: Request) {
       );
     }
 
-    const restaurant = await prisma.restaurant.findUnique({
-      where: {
-        id: restaurantId,
+    const booking = await prisma.$transaction(
+      async (tx) => {
+        // =========================
+        // CEK USER
+        // =========================
+
+        const user = await tx.user.findUnique({
+          where: {
+            id: userId,
+          },
+          select: {
+            id: true,
+            role: true,
+          },
+        });
+
+        if (!user) {
+          throw new Error("USER_NOT_FOUND");
+        }
+
+        if (user.role !== "CUSTOMER") {
+          throw new Error("ADMIN_BOOKING_NOT_ALLOWED");
+        }
+
+        // =========================
+        // CEK RESTORAN
+        // =========================
+
+        const restaurant = await tx.restaurant.findUnique({
+          where: {
+            id: restaurantId,
+          },
+        });
+
+        if (!restaurant) {
+          throw new Error("RESTAURANT_NOT_FOUND");
+        }
+
+        // =========================
+        // CEK MEJA
+        // =========================
+
+        const table = await tx.restaurantTable.findFirst({
+          where: {
+            id: tableId,
+            restaurantId,
+          },
+        });
+
+        if (!table) {
+          throw new Error("TABLE_NOT_FOUND");
+        }
+
+        // =========================
+        // CEK KAPASITAS
+        // =========================
+
+        if (guestCount > table.capacity) {
+          throw new Error("TABLE_CAPACITY_EXCEEDED");
+        }
+
+        // =========================
+        // CEK BENTROK BOOKING
+        // =========================
+        //
+        // Hanya PENDING dan CONFIRMED
+        // yang membuat meja dianggap terpakai.
+        //
+        // COMPLETED dan CANCELLED
+        // tidak menghalangi booking baru.
+        // =========================
+
+        const existingBooking = await tx.booking.findFirst({
+          where: {
+            tableId,
+            bookingDate: parsedBookingDate,
+            status: {
+              in: ["PENDING", "CONFIRMED"],
+            },
+          },
+        });
+
+        if (existingBooking) {
+          throw new Error("BOOKING_CONFLICT");
+        }
+
+        // =========================
+        // BUAT BOOKING
+        // =========================
+
+        return tx.booking.create({
+          data: {
+            userId: user.id,
+            restaurantId,
+            tableId,
+            bookingDate: parsedBookingDate,
+            guestCount,
+            status: "PENDING",
+          },
+          include: {
+            restaurant: true,
+            table: true,
+          },
+        });
       },
-    });
-
-    if (!restaurant) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Restoran tidak ditemukan.",
-        },
-        { status: 404 },
-      );
-    }
-
-    const table = await prisma.restaurantTable.findFirst({
-      where: {
-        id: tableId,
-        restaurantId,
+      {
+        isolationLevel: "Serializable",
       },
-    });
-
-    if (!table) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Meja tidak ditemukan di restoran tersebut.",
-        },
-        { status: 404 },
-      );
-    }
-
-    if (guestCount > table.capacity) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `Meja ${table.tableNumber} hanya memiliki kapasitas ${table.capacity} orang.`,
-        },
-        { status: 400 },
-      );
-    }
-
-    const existingBooking = await prisma.booking.findFirst({
-      where: {
-        tableId,
-        bookingDate: parsedBookingDate,
-        status: {
-          in: ["PENDING", "CONFIRMED"],
-        },
-      },
-    });
-
-    if (existingBooking) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Meja tersebut sudah dibooking pada waktu tersebut.",
-        },
-        { status: 409 },
-      );
-    }
-
-    const booking = await prisma.booking.create({
-      data: {
-        userId,
-        restaurantId,
-        tableId,
-        bookingDate: parsedBookingDate,
-        guestCount,
-        status: "PENDING",
-      },
-      include: {
-        restaurant: true,
-        table: true,
-      },
-    });
+    );
 
     return NextResponse.json(
       {
@@ -156,6 +188,81 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error("Create booking error:", error);
+
+    if (error instanceof Error) {
+      switch (error.message) {
+        case "USER_NOT_FOUND":
+          return NextResponse.json(
+            {
+              success: false,
+              message: "User tidak ditemukan.",
+            },
+            { status: 401 },
+          );
+
+        case "ADMIN_BOOKING_NOT_ALLOWED":
+          return NextResponse.json(
+            {
+              success: false,
+              message: "Akun admin tidak dapat melakukan booking.",
+            },
+            { status: 403 },
+          );
+
+        case "RESTAURANT_NOT_FOUND":
+          return NextResponse.json(
+            {
+              success: false,
+              message: "Restoran tidak ditemukan.",
+            },
+            { status: 404 },
+          );
+
+        case "TABLE_NOT_FOUND":
+          return NextResponse.json(
+            {
+              success: false,
+              message: "Meja tidak ditemukan di restoran tersebut.",
+            },
+            { status: 404 },
+          );
+
+        case "TABLE_CAPACITY_EXCEEDED":
+          return NextResponse.json(
+            {
+              success: false,
+              message: "Jumlah tamu melebihi kapasitas meja.",
+            },
+            { status: 400 },
+          );
+
+        case "BOOKING_CONFLICT":
+          return NextResponse.json(
+            {
+              success: false,
+              message: "Meja tersebut sudah dibooking pada waktu tersebut.",
+            },
+            { status: 409 },
+          );
+      }
+    }
+
+    // Prisma error P2034 = transaction conflict / serialization failure.
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "P2034"
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Meja baru saja dibooking customer lain. Silakan pilih meja atau waktu lain.",
+        },
+        { status: 409 },
+      );
+    }
 
     return NextResponse.json(
       {

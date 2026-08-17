@@ -19,7 +19,7 @@ export async function GET(
             bookings: {
               where: {
                 status: {
-                  not: "CANCELLED",
+                  in: ["PENDING", "CONFIRMED"],
                 },
               },
             },

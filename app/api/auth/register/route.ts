@@ -2,11 +2,15 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
+const VALID_ROLES = ["CUSTOMER", "ADMIN"] as const;
+
+type UserRole = (typeof VALID_ROLES)[number];
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    const { name, email, password, phone } = body;
+    const { name, email, password, phone, role } = body;
 
     if (!name || !email || !password) {
       return NextResponse.json(
@@ -30,6 +34,32 @@ export async function POST(request: Request) {
 
     const normalizedEmail = email.trim().toLowerCase();
 
+    if (!normalizedEmail) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Email wajib diisi.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const normalizedName = name.trim();
+
+    if (!normalizedName) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Nama wajib diisi.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const selectedRole: UserRole = VALID_ROLES.includes(role)
+      ? role
+      : "CUSTOMER";
+
     const existingUser = await prisma.user.findUnique({
       where: {
         email: normalizedEmail,
@@ -50,10 +80,11 @@ export async function POST(request: Request) {
 
     const user = await prisma.user.create({
       data: {
-        name: name.trim(),
+        name: normalizedName,
         email: normalizedEmail,
         password: hashedPassword,
         phone: phone?.trim() || null,
+        role: selectedRole,
       },
     });
 
@@ -66,6 +97,7 @@ export async function POST(request: Request) {
           name: user.name,
           email: user.email,
           phone: user.phone,
+          role: user.role,
         },
       },
       { status: 201 },

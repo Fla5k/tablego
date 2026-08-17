@@ -43,7 +43,11 @@ export default function LoginPage() {
         throw new Error(data.message || "Login gagal.");
       }
 
-      router.push("/restaurants");
+      if (data.user?.role === "ADMIN") {
+        router.push("/admin");
+      } else {
+        router.push("/restaurants");
+      }
     } catch (error) {
       console.error("Login error:", error);
 

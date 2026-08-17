@@ -4,6 +4,8 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
+type UserRole = "CUSTOMER" | "ADMIN";
+
 export default function RegisterPage() {
   const router = useRouter();
 
@@ -12,6 +14,7 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [role, setRole] = useState<UserRole>("CUSTOMER");
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -51,6 +54,7 @@ export default function RegisterPage() {
           email,
           phone,
           password,
+          role,
         }),
       });
 
@@ -116,13 +120,72 @@ export default function RegisterPage() {
             </h1>
 
             <p className="mt-3 text-sm leading-6 text-gray-500">
-              Daftar untuk mulai melakukan booking meja di restoran favoritmu.
+              Daftar untuk mulai menggunakan layanan TableGo.
             </p>
           </div>
 
           {/* Card */}
           <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
             <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Role */}
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  Daftar Sebagai
+                </label>
+
+                <div className="mt-2 grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => setRole("CUSTOMER")}
+                    className={`rounded-xl border px-4 py-4 text-left transition ${
+                      role === "CUSTOMER"
+                        ? "border-green-500 bg-green-50 ring-2 ring-green-100"
+                        : "border-gray-200 bg-white hover:border-green-300 hover:bg-green-50"
+                    }`}
+                  >
+                    <p
+                      className={`font-semibold ${
+                        role === "CUSTOMER" ? "text-green-700" : "text-gray-900"
+                      }`}
+                    >
+                      Customer
+                    </p>
+
+                    <p className="mt-1 text-xs text-gray-500">
+                      Untuk melakukan booking meja.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => setRole("ADMIN")}
+                    className={`rounded-xl border px-4 py-4 text-left transition ${
+                      role === "ADMIN"
+                        ? "border-green-500 bg-green-50 ring-2 ring-green-100"
+                        : "border-gray-200 bg-white hover:border-green-300 hover:bg-green-50"
+                    }`}
+                  >
+                    <p
+                      className={`font-semibold ${
+                        role === "ADMIN" ? "text-green-700" : "text-gray-900"
+                      }`}
+                    >
+                      Admin
+                    </p>
+
+                    <p className="mt-1 text-xs text-gray-500">
+                      Untuk mengelola TableGo.
+                    </p>
+                  </button>
+                </div>
+
+                <p className="mt-2 text-xs text-gray-400">
+                  Pilih jenis akun yang ingin kamu buat.
+                </p>
+              </div>
+
               {/* Name */}
               <div>
                 <label
