@@ -1,14 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import TableSelector from "@/components/booking/TableSelector";
+
+type Restaurant = {
+  id: number;
+  name: string;
+  tables: {
+    id: number;
+    tableNumber: string;
+    capacity: number;
+    available: boolean;
+  }[];
+};
 
 export default function BookingPage() {
   const router = useRouter();
   const params = useParams();
 
   const slug = params.slug as string;
+
+  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [restaurantLoading, setRestaurantLoading] = useState(true);
+  const [restaurantError, setRestaurantError] = useState("");
 
   const [guestCount, setGuestCount] = useState(2);
   const [selectedTime, setSelectedTime] = useState("19:00");
@@ -27,6 +42,39 @@ export default function BookingPage() {
     "20:30",
     "21:00",
   ];
+
+  useEffect(() => {
+    async function fetchRestaurant() {
+      try {
+        setRestaurantLoading(true);
+        setRestaurantError("");
+
+        const response = await fetch(`/api/restaurants/${slug}`);
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success || !data.restaurant) {
+          throw new Error(data.message || "Gagal mengambil data restoran.");
+        }
+
+        setRestaurant(data.restaurant);
+      } catch (error) {
+        console.error("Fetch restaurant booking error:", error);
+
+        setRestaurantError(
+          error instanceof Error
+            ? error.message
+            : "Gagal mengambil data restoran.",
+        );
+      } finally {
+        setRestaurantLoading(false);
+      }
+    }
+
+    if (slug) {
+      fetchRestaurant();
+    }
+  }, [slug]);
 
   const handleContinue = () => {
     if (!selectedDate) {
@@ -53,6 +101,62 @@ export default function BookingPage() {
     );
   };
 
+  if (restaurantLoading) {
+    return (
+      <main className="min-h-screen bg-gray-50">
+        <header className="border-b border-gray-200 bg-white">
+          <div className="mx-auto flex h-16 max-w-7xl items-center px-6">
+            <div className="text-2xl font-bold tracking-tight">
+              <span className="text-gray-900">Table</span>
+              <span className="text-green-500">Go</span>
+            </div>
+          </div>
+        </header>
+
+        <div className="mx-auto max-w-7xl px-6 py-16">
+          <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
+            <p className="text-sm text-gray-500">Memuat data restoran...</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (restaurantError || !restaurant) {
+    return (
+      <main className="min-h-screen bg-gray-50">
+        <header className="border-b border-gray-200 bg-white">
+          <div className="mx-auto flex h-16 max-w-7xl items-center px-6">
+            <div className="text-2xl font-bold tracking-tight">
+              <span className="text-gray-900">Table</span>
+              <span className="text-green-500">Go</span>
+            </div>
+          </div>
+        </header>
+
+        <div className="mx-auto max-w-7xl px-6 py-16">
+          <div className="rounded-2xl border border-red-100 bg-red-50 p-8 text-center">
+            <h1 className="text-xl font-bold text-red-700">
+              Restoran tidak ditemukan
+            </h1>
+
+            <p className="mt-2 text-sm text-red-600">
+              {restaurantError || "Data restoran tidak tersedia."}
+            </p>
+
+            <button
+              type="button"
+              onClick={() => router.push("/restaurants")}
+              className="mt-6 rounded-xl bg-green-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-green-600"
+            >
+              Kembali ke Restoran
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -65,6 +169,7 @@ export default function BookingPage() {
 
           <button
             type="button"
+            onClick={() => router.push(`/restaurants/${slug}`)}
             className="text-sm font-medium text-gray-600 transition hover:text-gray-900"
           >
             ← Kembali ke restoran
@@ -81,7 +186,7 @@ export default function BookingPage() {
           </p>
 
           <h1 className="mt-3 text-4xl font-bold tracking-tight text-gray-900">
-            Booking Meja di Kopi Senja
+            Booking Meja di {restaurant.name}
           </h1>
 
           <p className="mt-3 text-gray-600">
@@ -110,6 +215,7 @@ export default function BookingPage() {
                 value={selectedDate}
                 onChange={(e) => {
                   setSelectedDate(e.target.value);
+                  setSelectedTable(null);
                   setErrorMessage("");
                 }}
                 className="mt-5 w-full rounded-xl border border-gray-200 px-4 py-3 text-gray-700 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
@@ -135,6 +241,7 @@ export default function BookingPage() {
                     type="button"
                     onClick={() => {
                       setSelectedTime(time);
+                      setSelectedTable(null);
                       setErrorMessage("");
                     }}
                     className={`rounded-xl border px-4 py-3 text-sm font-medium transition ${
@@ -164,9 +271,10 @@ export default function BookingPage() {
               <div className="mt-5 flex items-center gap-4">
                 <button
                   type="button"
-                  onClick={() =>
-                    setGuestCount((count) => Math.max(1, count - 1))
-                  }
+                  onClick={() => {
+                    setGuestCount((count) => Math.max(1, count - 1));
+                    setSelectedTable(null);
+                  }}
                   className="flex h-12 w-12 items-center justify-center rounded-xl border border-gray-200 text-xl text-gray-600 transition hover:bg-gray-50"
                 >
                   −
@@ -180,9 +288,10 @@ export default function BookingPage() {
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setGuestCount((count) => Math.min(20, count + 1))
-                  }
+                  onClick={() => {
+                    setGuestCount((count) => Math.min(20, count + 1));
+                    setSelectedTable(null);
+                  }}
                   className="flex h-12 w-12 items-center justify-center rounded-xl border border-gray-200 text-xl text-gray-600 transition hover:bg-gray-50"
                 >
                   +
@@ -199,7 +308,7 @@ export default function BookingPage() {
                   <p className="text-sm text-gray-500">Ringkasan Booking</p>
 
                   <h2 className="mt-2 text-xl font-bold text-gray-900">
-                    Kopi Senja
+                    {restaurant.name}
                   </h2>
                 </div>
 
