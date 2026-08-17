@@ -428,7 +428,7 @@ export default function AdminBookingsPage() {
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Nama, ID, restoran, atau meja..."
-                  className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
                 />
               </div>
 
@@ -448,7 +448,7 @@ export default function AdminBookingsPage() {
                   onChange={(event) =>
                     setStatusFilter(event.target.value as StatusFilter)
                   }
-                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
                 >
                   <option value="ALL">Semua Status</option>
                   <option value="PENDING">Menunggu</option>
@@ -473,7 +473,7 @@ export default function AdminBookingsPage() {
                   type="date"
                   value={dateFilter}
                   onChange={(event) => setDateFilter(event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
                 />
               </div>
 
