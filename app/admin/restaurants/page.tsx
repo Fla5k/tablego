@@ -606,7 +606,7 @@ export default function AdminRestaurantsPage() {
         ========================= */}
 
         {showForm && (
-          <section className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <section className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 text-gray-900 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">
@@ -625,7 +625,7 @@ export default function AdminRestaurantsPage() {
                   setEditingId(null);
                   setForm(emptyForm);
                 }}
-                className="rounded-lg px-3 py-2 text-sm font-medium text-gray-500 transition hover:bg-gray-100"
+                className="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100"
               >
                 Tutup
               </button>
@@ -640,7 +640,7 @@ export default function AdminRestaurantsPage() {
               <div>
                 <label
                   htmlFor="name"
-                  className="text-sm font-medium text-gray-700"
+                  className="text-sm font-medium text-gray-800"
                 >
                   Nama Restoran *
                 </label>
@@ -665,7 +665,7 @@ export default function AdminRestaurantsPage() {
               <div>
                 <label
                   htmlFor="phone"
-                  className="text-sm font-medium text-gray-700"
+                  className="text-sm font-medium text-gray-800"
                 >
                   Nomor Telepon
                 </label>
@@ -689,7 +689,7 @@ export default function AdminRestaurantsPage() {
               <div className="md:col-span-2">
                 <label
                   htmlFor="address"
-                  className="text-sm font-medium text-gray-700"
+                  className="text-sm font-medium text-gray-800"
                 >
                   Alamat *
                 </label>
@@ -714,7 +714,7 @@ export default function AdminRestaurantsPage() {
               <div className="md:col-span-2">
                 <label
                   htmlFor="description"
-                  className="text-sm font-medium text-gray-700"
+                  className="text-sm font-medium text-gray-800"
                 >
                   Deskripsi
                 </label>
@@ -739,7 +739,7 @@ export default function AdminRestaurantsPage() {
               <div className="md:col-span-2">
                 <label
                   htmlFor="image"
-                  className="text-sm font-medium text-gray-700"
+                  className="text-sm font-medium text-gray-800"
                 >
                   URL Gambar
                 </label>
@@ -796,11 +796,11 @@ export default function AdminRestaurantsPage() {
 
         {loading ? (
           <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
-            <p className="text-sm text-gray-500">Memuat data restoran...</p>
+            <p className="text-sm text-gray-600">Memuat data restoran...</p>
           </div>
         ) : restaurants.length === 0 ? (
           <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
-            <p className="text-gray-500">Belum ada restoran.</p>
+            <p className="text-gray-600">Belum ada restoran.</p>
           </div>
         ) : (
           <section className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -816,13 +816,13 @@ export default function AdminRestaurantsPage() {
                     className="h-48 w-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-48 items-center justify-center bg-gray-100 text-sm text-gray-400">
+                  <div className="flex h-48 items-center justify-center bg-gray-100 text-sm text-gray-500">
                     Tidak ada gambar
                   </div>
                 )}
 
                 <div className="p-5">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                     Restoran #{restaurant.id}
                   </p>
 
@@ -830,7 +830,7 @@ export default function AdminRestaurantsPage() {
                     {restaurant.name}
                   </h2>
 
-                  <p className="mt-2 text-sm text-gray-500">
+                  <p className="mt-2 text-sm text-gray-600">
                     {restaurant.address}
                   </p>
 
@@ -844,7 +844,7 @@ export default function AdminRestaurantsPage() {
 
                   <div className="mt-5 grid grid-cols-2 gap-3">
                     <div className="rounded-xl bg-gray-50 p-3">
-                      <p className="text-xs text-gray-400">Meja</p>
+                      <p className="text-xs text-gray-500">Meja</p>
 
                       <p className="mt-1 font-bold text-gray-900">
                         {restaurant._count.tables}
@@ -852,7 +852,7 @@ export default function AdminRestaurantsPage() {
                     </div>
 
                     <div className="rounded-xl bg-gray-50 p-3">
-                      <p className="text-xs text-gray-400">Booking</p>
+                      <p className="text-xs text-gray-500">Booking</p>
 
                       <p className="mt-1 font-bold text-gray-900">
                         {restaurant._count.bookings}
@@ -902,12 +902,12 @@ export default function AdminRestaurantsPage() {
 
         {selectedRestaurantId && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <section className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-xl">
+            <section className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white text-gray-900 shadow-xl">
               {/* PANEL HEADER */}
 
               <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-5">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-green-500">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-green-600">
                     Kelola Meja
                   </p>
 
@@ -919,18 +919,18 @@ export default function AdminRestaurantsPage() {
                 <button
                   type="button"
                   onClick={closeTableManagement}
-                  className="rounded-lg px-3 py-2 text-sm font-medium text-gray-500 transition hover:bg-gray-100"
+                  className="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
                 >
                   Tutup
                 </button>
               </div>
 
-              <div className="p-6">
+              <div className="p-6 text-gray-900">
                 {/* ADD TABLE BUTTON */}
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-600">
                       Kelola nomor dan kapasitas meja restoran.
                     </p>
                   </div>
@@ -949,7 +949,7 @@ export default function AdminRestaurantsPage() {
                 {showTableForm && (
                   <form
                     onSubmit={handleTableSubmit}
-                    className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-5"
+                    className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-5 text-gray-900"
                   >
                     <div className="flex items-center justify-between">
                       <div>
@@ -957,7 +957,7 @@ export default function AdminRestaurantsPage() {
                           {editingTableId ? "Edit Meja" : "Tambah Meja"}
                         </h3>
 
-                        <p className="mt-1 text-xs text-gray-500">
+                        <p className="mt-1 text-xs text-gray-600">
                           Isi nomor meja dan kapasitasnya.
                         </p>
                       </div>
@@ -969,7 +969,7 @@ export default function AdminRestaurantsPage() {
                           setEditingTableId(null);
                           setTableForm(emptyTableForm);
                         }}
-                        className="text-sm font-medium text-gray-500 hover:text-gray-900"
+                        className="text-sm font-medium text-gray-600 hover:text-gray-900"
                       >
                         Batal
                       </button>
@@ -979,7 +979,7 @@ export default function AdminRestaurantsPage() {
                       <div>
                         <label
                           htmlFor="tableNumber"
-                          className="text-sm font-medium text-gray-700"
+                          className="text-sm font-medium text-gray-800"
                         >
                           Nomor Meja *
                         </label>
@@ -995,14 +995,14 @@ export default function AdminRestaurantsPage() {
                           }
                           required
                           placeholder="Contoh: T6"
-                          className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                          className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100"
                         />
                       </div>
 
                       <div>
                         <label
                           htmlFor="capacity"
-                          className="text-sm font-medium text-gray-700"
+                          className="text-sm font-medium text-gray-800"
                         >
                           Kapasitas *
                         </label>
@@ -1020,7 +1020,7 @@ export default function AdminRestaurantsPage() {
                           }
                           required
                           placeholder="Contoh: 4"
-                          className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                          className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100"
                         />
                       </div>
                     </div>
@@ -1042,11 +1042,11 @@ export default function AdminRestaurantsPage() {
                 {/* TABLE LIST */}
 
                 {tablesLoading ? (
-                  <div className="mt-6 rounded-2xl border border-gray-200 p-8 text-center">
-                    <p className="text-sm text-gray-500">Memuat data meja...</p>
+                  <div className="mt-6 rounded-2xl border border-gray-200 p-8 text-center text-gray-900">
+                    <p className="text-sm text-gray-600">Memuat data meja...</p>
                   </div>
                 ) : tables.length === 0 ? (
-                  <div className="mt-6 rounded-2xl border border-dashed border-gray-300 p-8 text-center">
+                  <div className="mt-6 rounded-2xl border border-dashed border-gray-300 p-8 text-center text-gray-900">
                     <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-xl">
                       🪑
                     </div>
@@ -1055,7 +1055,7 @@ export default function AdminRestaurantsPage() {
                       Belum ada meja
                     </h3>
 
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-gray-600">
                       Tambahkan meja untuk restoran ini.
                     </p>
                   </div>
@@ -1064,11 +1064,11 @@ export default function AdminRestaurantsPage() {
                     {tables.map((table) => (
                       <div
                         key={table.id}
-                        className="rounded-2xl border border-gray-200 bg-white p-5"
+                        className="rounded-2xl border border-gray-200 bg-white p-5 text-gray-900"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                               Meja
                             </p>
 
@@ -1083,7 +1083,7 @@ export default function AdminRestaurantsPage() {
                         </div>
 
                         <div className="mt-4 rounded-xl bg-gray-50 p-3">
-                          <p className="text-xs text-gray-400">Kapasitas</p>
+                          <p className="text-xs text-gray-500">Kapasitas</p>
 
                           <p className="mt-1 font-bold text-gray-900">
                             {table.capacity} orang

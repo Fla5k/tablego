@@ -1,27 +1,35 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type BookingStatus = "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
 
 type Booking = {
   id: number;
+  userId: number;
+  restaurantId: number;
+  tableId: number;
   bookingDate: string;
   guestCount: number;
   status: BookingStatus;
   notes: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+
   user: {
     id: number;
     name: string;
     email: string;
     phone: string | null;
   };
+
   restaurant: {
     id: number;
     name: string;
     address: string;
   };
+
   table: {
     id: number;
     tableNumber: string;
@@ -50,14 +58,17 @@ const statusConfig: Record<
     label: "Menunggu",
     className: "bg-yellow-50 text-yellow-700",
   },
+
   CONFIRMED: {
     label: "Dikonfirmasi",
     className: "bg-green-50 text-green-700",
   },
+
   COMPLETED: {
     label: "Selesai",
     className: "bg-blue-50 text-blue-700",
   },
+
   CANCELLED: {
     label: "Dibatalkan",
     className: "bg-red-50 text-red-700",
@@ -65,23 +76,39 @@ const statusConfig: Record<
 };
 
 function formatDate(dateString: string) {
+  const date = new Date(dateString);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
   return new Intl.DateTimeFormat("id-ID", {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
-  }).format(new Date(dateString));
+  }).format(date);
 }
 
 function formatTime(dateString: string) {
+  const date = new Date(dateString);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
   return new Intl.DateTimeFormat("id-ID", {
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(dateString));
+  }).format(date);
 }
 
 function getDateInputValue(dateString: string) {
   const date = new Date(dateString);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
 
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -95,8 +122,12 @@ export default function AdminBookingsPage() {
 
   const [user, setUser] = useState<AdminUser | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
+
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
   const [processingId, setProcessingId] = useState<number | null>(null);
+
   const [errorMessage, setErrorMessage] = useState("");
 
   // =========================
@@ -108,48 +139,86 @@ export default function AdminBookingsPage() {
   const [dateFilter, setDateFilter] = useState("");
 
   // =========================
-  // FETCH DATA
+  // FETCH ADMIN USER
   // =========================
 
-  useEffect(() => {
-    async function fetchAdminData() {
+  const fetchAdminUser = useCallback(async () => {
+    const response = await fetch("/api/auth/me", {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success || !data.user) {
+      router.push("/login");
+      return null;
+    }
+
+    if (data.user.role !== "ADMIN") {
+      router.push("/restaurants");
+      return null;
+    }
+
+    setUser(data.user);
+
+    return data.user;
+  }, [router]);
+
+  // =========================
+  // FETCH BOOKINGS
+  // =========================
+
+  const fetchBookings = useCallback(async () => {
+    const response = await fetch("/api/admin/bookings", {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    const data = await response.json();
+
+    console.log("ADMIN BOOKING RESPONSE:", data);
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || "Gagal mengambil data booking.");
+    }
+
+    if (!Array.isArray(data.bookings)) {
+      throw new Error("Format data booking dari server tidak valid.");
+    }
+
+    setBookings(data.bookings);
+
+    return data.bookings;
+  }, []);
+
+  // =========================
+  // LOAD DATA
+  // =========================
+
+  const loadData = useCallback(
+    async (isRefresh = false) => {
       try {
-        setLoading(true);
+        if (isRefresh) {
+          setRefreshing(true);
+        } else {
+          setLoading(true);
+        }
+
         setErrorMessage("");
 
-        const userResponse = await fetch("/api/auth/me", {
-          method: "GET",
-          credentials: "include",
-        });
+        const adminUser = await fetchAdminUser();
 
-        const userData = await userResponse.json();
-
-        if (!userResponse.ok || !userData.success || !userData.user) {
-          router.push("/login");
+        if (!adminUser) {
           return;
         }
 
-        if (userData.user.role !== "ADMIN") {
-          router.push("/restaurants");
-          return;
-        }
-
-        setUser(userData.user);
-
-        const bookingResponse = await fetch("/api/admin/bookings", {
-          method: "GET",
-          credentials: "include",
-        });
-
-        const bookingData = await bookingResponse.json();
-
-        if (!bookingResponse.ok || !bookingData.success) {
-          throw new Error(
-            bookingData.message || "Gagal mengambil data booking.",
-          );
-        }
-
-        setBookings(bookingData.bookings);
+        await fetchBookings();
       } catch (error) {
         console.error("Admin bookings error:", error);
 
@@ -160,11 +229,15 @@ export default function AdminBookingsPage() {
         );
       } finally {
         setLoading(false);
+        setRefreshing(false);
       }
-    }
+    },
+    [fetchAdminUser, fetchBookings],
+  );
 
-    fetchAdminData();
-  }, [router]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // =========================
   // UPDATE STATUS
@@ -196,6 +269,7 @@ export default function AdminBookingsPage() {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json",
         },
         credentials: "include",
         body: JSON.stringify({
@@ -205,10 +279,13 @@ export default function AdminBookingsPage() {
 
       const data = await response.json();
 
+      console.log("UPDATE BOOKING RESPONSE:", data);
+
       if (!response.ok || !data.success) {
         throw new Error(data.message || "Gagal memperbarui status booking.");
       }
 
+      // Update booking di layar tanpa reload
       setBookings((currentBookings) =>
         currentBookings.map((booking) =>
           booking.id === bookingId
@@ -219,6 +296,9 @@ export default function AdminBookingsPage() {
             : booking,
         ),
       );
+
+      // Pastikan data dari database tetap sinkron
+      await fetchBookings();
     } catch (error) {
       console.error("Update booking status error:", error);
 
@@ -279,6 +359,10 @@ export default function AdminBookingsPage() {
     (booking) => booking.status === "CANCELLED",
   ).length;
 
+  // =========================
+  // RESET FILTER
+  // =========================
+
   const resetFilters = () => {
     setSearchQuery("");
     setStatusFilter("ALL");
@@ -288,25 +372,48 @@ export default function AdminBookingsPage() {
   const hasActiveFilters =
     searchQuery.trim() !== "" || statusFilter !== "ALL" || dateFilter !== "";
 
+  // =========================
+  // RENDER
+  // =========================
+
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-7xl px-6 py-12">
         {/* =========================
-            TITLE
+            HEADER
         ========================= */}
 
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wider text-green-500">
-            TableGo Admin
-          </p>
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wider text-green-500">
+              TableGo Admin
+            </p>
 
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-gray-900">
-            Kelola Booking
-          </h1>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-gray-900">
+              Kelola Booking
+            </h1>
 
-          <p className="mt-2 text-gray-600">
-            Pantau dan proses seluruh booking restoran.
-          </p>
+            <p className="mt-2 text-gray-600">
+              Pantau dan proses seluruh booking restoran.
+            </p>
+
+            {user && (
+              <p className="mt-2 text-sm text-gray-400">
+                Login sebagai {user.name}
+              </p>
+            )}
+          </div>
+
+          {/* REFRESH */}
+
+          <button
+            type="button"
+            onClick={() => loadData(true)}
+            disabled={loading || refreshing}
+            className="rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {refreshing ? "Memuat..." : "↻ Refresh Booking"}
+          </button>
         </div>
 
         {/* =========================
@@ -359,8 +466,7 @@ export default function AdminBookingsPage() {
               <h2 className="font-bold text-gray-900">Filter Booking</h2>
 
               <p className="text-sm text-gray-500">
-                Cari dan filter booking berdasarkan customer, restoran, meja,
-                status, atau tanggal.
+                Cari berdasarkan customer, restoran, meja, status, atau tanggal.
               </p>
             </div>
 
@@ -404,9 +510,13 @@ export default function AdminBookingsPage() {
                   className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
                 >
                   <option value="ALL">Semua Status</option>
+
                   <option value="PENDING">Menunggu</option>
+
                   <option value="CONFIRMED">Dikonfirmasi</option>
+
                   <option value="COMPLETED">Selesai</option>
+
                   <option value="CANCELLED">Dibatalkan</option>
                 </select>
               </div>
@@ -472,7 +582,9 @@ export default function AdminBookingsPage() {
 
         {loading && (
           <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
-            <p className="text-sm text-gray-500">Memuat data booking...</p>
+            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-green-500" />
+
+            <p className="mt-4 text-sm text-gray-500">Memuat data booking...</p>
           </div>
         )}
 
@@ -486,7 +598,7 @@ export default function AdminBookingsPage() {
 
             <button
               type="button"
-              onClick={() => window.location.reload()}
+              onClick={() => loadData()}
               className="mt-4 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700"
             >
               Coba Lagi
@@ -495,7 +607,7 @@ export default function AdminBookingsPage() {
         )}
 
         {/* =========================
-            EMPTY
+            EMPTY DATABASE
         ========================= */}
 
         {!loading && !errorMessage && bookings.length === 0 && (
@@ -511,6 +623,14 @@ export default function AdminBookingsPage() {
             <p className="mt-2 text-sm text-gray-500">
               Belum ada booking yang masuk ke sistem.
             </p>
+
+            <button
+              type="button"
+              onClick={() => loadData(true)}
+              className="mt-5 rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"
+            >
+              Muat Ulang
+            </button>
           </div>
         )}
 
@@ -553,6 +673,7 @@ export default function AdminBookingsPage() {
           <div className="mt-8 space-y-5">
             {filteredBookings.map((booking) => {
               const status = statusConfig[booking.status];
+
               const isProcessing = processingId === booking.id;
 
               return (
@@ -561,7 +682,7 @@ export default function AdminBookingsPage() {
                   className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
                 >
                   <div className="p-6">
-                    {/* BOOKING HEADER */}
+                    {/* HEADER */}
 
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
@@ -575,6 +696,7 @@ export default function AdminBookingsPage() {
 
                         <p className="mt-1 text-sm text-gray-500">
                           {booking.user.email}
+
                           {booking.user.phone ? ` · ${booking.user.phone}` : ""}
                         </p>
                       </div>
@@ -586,9 +708,11 @@ export default function AdminBookingsPage() {
                       </span>
                     </div>
 
-                    {/* BOOKING DETAIL */}
+                    {/* DETAIL */}
 
                     <div className="mt-6 grid gap-5 border-t border-gray-100 pt-6 md:grid-cols-4">
+                      {/* RESTAURANT */}
+
                       <div>
                         <p className="text-xs font-medium text-gray-400">
                           Restoran
@@ -603,6 +727,8 @@ export default function AdminBookingsPage() {
                         </p>
                       </div>
 
+                      {/* DATE */}
+
                       <div>
                         <p className="text-xs font-medium text-gray-400">
                           Tanggal
@@ -613,6 +739,8 @@ export default function AdminBookingsPage() {
                         </p>
                       </div>
 
+                      {/* TIME */}
+
                       <div>
                         <p className="text-xs font-medium text-gray-400">
                           Waktu
@@ -622,6 +750,8 @@ export default function AdminBookingsPage() {
                           {formatTime(booking.bookingDate)}
                         </p>
                       </div>
+
+                      {/* TABLE */}
 
                       <div>
                         <p className="text-xs font-medium text-gray-400">
@@ -653,7 +783,9 @@ export default function AdminBookingsPage() {
                       </div>
                     )}
 
-                    {/* PENDING ACTIONS */}
+                    {/* =========================
+                          PENDING
+                      ========================= */}
 
                     {booking.status === "PENDING" && (
                       <div className="mt-6 flex flex-col gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:justify-end">
@@ -681,7 +813,9 @@ export default function AdminBookingsPage() {
                       </div>
                     )}
 
-                    {/* CONFIRMED ACTION */}
+                    {/* =========================
+                          CONFIRMED
+                      ========================= */}
 
                     {booking.status === "CONFIRMED" && (
                       <div className="mt-6 flex flex-col gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:justify-end">
@@ -709,7 +843,9 @@ export default function AdminBookingsPage() {
                       </div>
                     )}
 
-                    {/* FINAL STATUS - COMPLETED */}
+                    {/* =========================
+                          COMPLETED
+                      ========================= */}
 
                     {booking.status === "COMPLETED" && (
                       <div className="mt-6 border-t border-gray-100 pt-5">
@@ -726,7 +862,9 @@ export default function AdminBookingsPage() {
                       </div>
                     )}
 
-                    {/* FINAL STATUS - CANCELLED */}
+                    {/* =========================
+                          CANCELLED
+                      ========================= */}
 
                     {booking.status === "CANCELLED" && (
                       <div className="mt-6 border-t border-gray-100 pt-5">

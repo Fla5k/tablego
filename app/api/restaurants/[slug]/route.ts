@@ -12,6 +12,10 @@ export async function GET(
     const date = url.searchParams.get("date");
     const time = url.searchParams.get("time");
 
+    // =========================
+    // CARI RESTORAN
+    // =========================
+
     const restaurants = await prisma.restaurant.findMany({
       include: {
         tables: {
@@ -43,16 +47,42 @@ export async function GET(
       );
     }
 
+    // =========================
+    // BUAT WAKTU YANG DIPILIH
+    // =========================
+
+    let selectedDateTime: Date | null = null;
+
+    if (date && time) {
+      const parsedDateTime = new Date(`${date}T${time}:00+07:00`);
+
+      if (Number.isNaN(parsedDateTime.getTime())) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Tanggal atau waktu tidak valid.",
+          },
+          { status: 400 },
+        );
+      }
+
+      selectedDateTime = parsedDateTime;
+    }
+
+    // =========================
+    // CEK KETERSEDIAAN MEJA
+    // =========================
+
     const tables = restaurant.tables.map((table) => {
       let available = true;
 
-      if (date && time) {
-        const selectedDateTime = new Date(`${date}T${time}:00+07:00`);
-
+      if (selectedDateTime) {
         available = !table.bookings.some((booking) => {
           const bookingTime = new Date(booking.bookingDate);
 
-          return bookingTime.getTime() === selectedDateTime.getTime();
+          return (
+            bookingTime.getTime() === selectedDateTime!.getTime()
+          );
         });
       }
 
@@ -63,6 +93,10 @@ export async function GET(
         available,
       };
     });
+
+    // =========================
+    // RESPONSE
+    // =========================
 
     return NextResponse.json({
       success: true,

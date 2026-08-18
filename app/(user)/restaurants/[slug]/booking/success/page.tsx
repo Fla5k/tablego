@@ -1,6 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+
+type Restaurant = {
+  id: number;
+  name: string;
+  address: string;
+};
 
 export default function BookingSuccessPage() {
   const router = useRouter();
@@ -13,8 +20,48 @@ export default function BookingSuccessPage() {
   const selectedTime = searchParams.get("time");
   const guestCount = searchParams.get("guests");
   const selectedTable = searchParams.get("table");
-
   const bookingCode = searchParams.get("code");
+
+  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [loadingRestaurant, setLoadingRestaurant] = useState(true);
+
+  // =========================
+  // FETCH RESTAURANT
+  // =========================
+
+  useEffect(() => {
+    async function fetchRestaurant() {
+      try {
+        setLoadingRestaurant(true);
+
+        const response = await fetch(`/api/restaurants/${slug}`);
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success || !data.restaurant) {
+          throw new Error(data.message || "Gagal mengambil data restoran.");
+        }
+
+        setRestaurant({
+          id: data.restaurant.id,
+          name: data.restaurant.name,
+          address: data.restaurant.address,
+        });
+      } catch (error) {
+        console.error("Fetch restaurant success page error:", error);
+      } finally {
+        setLoadingRestaurant(false);
+      }
+    }
+
+    if (slug) {
+      fetchRestaurant();
+    }
+  }, [slug]);
+
+  // =========================
+  // FORMAT DATE
+  // =========================
 
   const formattedDate = selectedDate
     ? new Date(`${selectedDate}T00:00:00`).toLocaleDateString("id-ID", {
@@ -26,9 +73,11 @@ export default function BookingSuccessPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      {/* Content */}
       <div className="mx-auto max-w-2xl px-6 py-12">
-        {/* Success */}
+        {/* =========================
+            SUCCESS
+        ========================= */}
+
         <div className="text-center">
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
             <span className="text-4xl font-bold text-green-600">✓</span>
@@ -48,7 +97,10 @@ export default function BookingSuccessPage() {
           </p>
         </div>
 
-        {/* Booking Code */}
+        {/* =========================
+            BOOKING CODE
+        ========================= */}
+
         <div className="mt-10 rounded-2xl border border-green-200 bg-green-50 p-6 text-center">
           <p className="text-sm font-medium text-green-700">Kode Booking</p>
 
@@ -61,20 +113,52 @@ export default function BookingSuccessPage() {
           </p>
         </div>
 
-        {/* Booking Detail */}
+        {/* =========================
+            BOOKING DETAIL
+        ========================= */}
+
         <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          {/* RESTAURANT */}
+
           <div className="border-b border-gray-100 pb-5">
             <p className="text-sm text-gray-500">Restoran</p>
 
-            <h2 className="mt-1 text-2xl font-bold text-gray-900">
-              Kopi Senja
-            </h2>
+            {loadingRestaurant ? (
+              <>
+                <div className="mt-2 h-7 w-48 animate-pulse rounded bg-gray-200" />
 
-            <p className="mt-1 text-sm text-gray-500">Bandung, Jawa Barat</p>
+                <div className="mt-2 h-4 w-64 animate-pulse rounded bg-gray-100" />
+              </>
+            ) : restaurant ? (
+              <>
+                <h2 className="mt-1 text-2xl font-bold text-gray-900">
+                  {restaurant.name}
+                </h2>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  {restaurant.address}
+                </p>
+              </>
+            ) : (
+              <>
+                <h2 className="mt-1 text-2xl font-bold text-gray-900">
+                  Restoran
+                </h2>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  Informasi restoran tidak tersedia.
+                </p>
+              </>
+            )}
           </div>
 
+          {/* =========================
+              BOOKING INFORMATION
+          ========================= */}
+
           <div className="grid gap-6 py-6 sm:grid-cols-2">
-            {/* Date */}
+            {/* DATE */}
+
             <div>
               <p className="text-sm text-gray-500">Tanggal</p>
 
@@ -83,7 +167,8 @@ export default function BookingSuccessPage() {
               </p>
             </div>
 
-            {/* Time */}
+            {/* TIME */}
+
             <div>
               <p className="text-sm text-gray-500">Waktu</p>
 
@@ -92,7 +177,8 @@ export default function BookingSuccessPage() {
               </p>
             </div>
 
-            {/* Guests */}
+            {/* GUESTS */}
+
             <div>
               <p className="text-sm text-gray-500">Jumlah Tamu</p>
 
@@ -101,7 +187,8 @@ export default function BookingSuccessPage() {
               </p>
             </div>
 
-            {/* Table */}
+            {/* TABLE */}
+
             <div>
               <p className="text-sm text-gray-500">Meja</p>
 
@@ -111,7 +198,10 @@ export default function BookingSuccessPage() {
             </div>
           </div>
 
-          {/* Status */}
+          {/* =========================
+              STATUS
+          ========================= */}
+
           <div className="rounded-xl bg-yellow-50 p-4">
             <p className="text-sm font-medium text-gray-700">Status Booking</p>
 
@@ -130,7 +220,10 @@ export default function BookingSuccessPage() {
           </div>
         </div>
 
-        {/* Action */}
+        {/* =========================
+            ACTION
+        ========================= */}
+
         <div className="mt-6 space-y-3">
           <button
             type="button"
@@ -148,6 +241,10 @@ export default function BookingSuccessPage() {
             Lihat Booking Saya
           </button>
         </div>
+
+        {/* =========================
+            FOOTER
+        ========================= */}
 
         <p className="mt-5 text-center text-xs text-gray-400">
           🔒 Simpan kode booking kamu sebagai bukti reservasi.
