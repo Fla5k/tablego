@@ -26,18 +26,6 @@ export default function BookingSuccessPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <div className="text-2xl font-bold tracking-tight">
-            <span className="text-gray-900">Table</span>
-            <span className="text-green-500">Go</span>
-          </div>
-
-          <span className="text-sm text-gray-500">Booking Berhasil</span>
-        </div>
-      </header>
-
       {/* Content */}
       <div className="mx-auto max-w-2xl px-6 py-12">
         {/* Success */}
@@ -118,7 +106,7 @@ export default function BookingSuccessPage() {
               <p className="text-sm text-gray-500">Meja</p>
 
               <p className="mt-1 font-semibold text-green-600">
-                {selectedTable || "Belum dipilih"}
+                {selectedTable ? `Meja ${selectedTable}` : "Belum dipilih"}
               </p>
             </div>
           </div>
@@ -143,13 +131,23 @@ export default function BookingSuccessPage() {
         </div>
 
         {/* Action */}
-        <button
-          type="button"
-          onClick={() => router.push(`/restaurants/${slug}`)}
-          className="mt-6 w-full rounded-xl bg-green-500 px-5 py-3.5 font-semibold text-white transition hover:bg-green-600"
-        >
-          Kembali ke Restoran
-        </button>
+        <div className="mt-6 space-y-3">
+          <button
+            type="button"
+            onClick={() => router.push(`/restaurants/${slug}`)}
+            className="w-full rounded-xl bg-green-500 px-5 py-3.5 font-semibold text-white transition hover:bg-green-600"
+          >
+            Kembali ke Restoran
+          </button>
+
+          <button
+            type="button"
+            onClick={() => router.push("/bookings")}
+            className="w-full rounded-xl border border-gray-200 bg-white px-5 py-3.5 font-semibold text-gray-700 transition hover:bg-gray-50"
+          >
+            Lihat Booking Saya
+          </button>
+        </div>
 
         <p className="mt-5 text-center text-xs text-gray-400">
           🔒 Simpan kode booking kamu sebagai bukti reservasi.

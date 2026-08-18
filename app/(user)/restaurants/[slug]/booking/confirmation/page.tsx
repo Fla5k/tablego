@@ -155,21 +155,6 @@ export default function BookingConfirmationPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <button
-            type="button"
-            onClick={() => router.push("/restaurants")}
-            className="text-2xl font-bold tracking-tight"
-          >
-            <span className="text-gray-900">Table</span>
-            <span className="text-green-500">Go</span>
-          </button>
-
-          <span className="text-sm text-gray-500">Konfirmasi Booking</span>
-        </div>
-      </header>
-
       <div className="mx-auto max-w-3xl px-6 py-12">
         <div className="text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">

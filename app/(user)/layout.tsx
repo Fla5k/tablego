@@ -1,4 +1,4 @@
-import Navbar from "@/components/layout/Navbar";
+import UserNavbar from "@/components/layout/UserNavbar";
 
 export default function UserLayout({
   children,
@@ -7,7 +7,7 @@ export default function UserLayout({
 }) {
   return (
     <>
-      <Navbar />
+      <UserNavbar />
       {children}
     </>
   );

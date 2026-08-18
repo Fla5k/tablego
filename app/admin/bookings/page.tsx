@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 type BookingStatus = "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
@@ -234,27 +233,6 @@ export default function AdminBookingsPage() {
   };
 
   // =========================
-  // LOGOUT
-  // =========================
-
-  const handleLogout = async () => {
-    try {
-      const response = await fetch("/api/auth/logout", {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error("Logout gagal.");
-      }
-
-      router.push("/login");
-      router.refresh();
-    } catch (error) {
-      console.error("Admin logout error:", error);
-    }
-  };
-
-  // =========================
   // FILTERED BOOKINGS
   // =========================
 
@@ -312,39 +290,10 @@ export default function AdminBookingsPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      {/* HEADER */}
-
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <Link href="/" className="text-2xl font-bold tracking-tight">
-            <span className="text-gray-900">Table</span>
-            <span className="text-green-500">Go</span>
-
-            <span className="ml-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
-              Admin
-            </span>
-          </Link>
-
-          <div className="flex items-center gap-3">
-            {user && (
-              <span className="hidden text-sm font-medium text-gray-700 sm:block">
-                Halo, {user.name}
-              </span>
-            )}
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-            >
-              Keluar
-            </button>
-          </div>
-        </div>
-      </header>
-
       <div className="mx-auto max-w-7xl px-6 py-12">
-        {/* TITLE */}
+        {/* =========================
+            TITLE
+        ========================= */}
 
         <div>
           <p className="text-sm font-semibold uppercase tracking-wider text-green-500">
@@ -360,7 +309,9 @@ export default function AdminBookingsPage() {
           </p>
         </div>
 
-        {/* SUMMARY */}
+        {/* =========================
+            SUMMARY
+        ========================= */}
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -398,7 +349,9 @@ export default function AdminBookingsPage() {
           </div>
         </div>
 
-        {/* FILTER */}
+        {/* =========================
+            FILTER
+        ========================= */}
 
         {!loading && !errorMessage && bookings.length > 0 && (
           <section className="mt-8 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -428,7 +381,7 @@ export default function AdminBookingsPage() {
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Nama, ID, restoran, atau meja..."
-                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100"
                 />
               </div>
 
@@ -513,7 +466,9 @@ export default function AdminBookingsPage() {
           </section>
         )}
 
-        {/* LOADING */}
+        {/* =========================
+            LOADING
+        ========================= */}
 
         {loading && (
           <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
@@ -521,7 +476,9 @@ export default function AdminBookingsPage() {
           </div>
         )}
 
-        {/* ERROR */}
+        {/* =========================
+            ERROR
+        ========================= */}
 
         {!loading && errorMessage && (
           <div className="mt-8 rounded-2xl border border-red-100 bg-red-50 p-6">
@@ -537,7 +494,9 @@ export default function AdminBookingsPage() {
           </div>
         )}
 
-        {/* EMPTY */}
+        {/* =========================
+            EMPTY
+        ========================= */}
 
         {!loading && !errorMessage && bookings.length === 0 && (
           <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
@@ -555,7 +514,9 @@ export default function AdminBookingsPage() {
           </div>
         )}
 
-        {/* FILTER EMPTY */}
+        {/* =========================
+            FILTER EMPTY
+        ========================= */}
 
         {!loading &&
           !errorMessage &&
@@ -584,7 +545,9 @@ export default function AdminBookingsPage() {
             </div>
           )}
 
-        {/* BOOKING LIST */}
+        {/* =========================
+            BOOKING LIST
+        ========================= */}
 
         {!loading && !errorMessage && filteredBookings.length > 0 && (
           <div className="mt-8 space-y-5">
@@ -746,7 +709,7 @@ export default function AdminBookingsPage() {
                       </div>
                     )}
 
-                    {/* FINAL STATUS */}
+                    {/* FINAL STATUS - COMPLETED */}
 
                     {booking.status === "COMPLETED" && (
                       <div className="mt-6 border-t border-gray-100 pt-5">
@@ -762,6 +725,8 @@ export default function AdminBookingsPage() {
                         </div>
                       </div>
                     )}
+
+                    {/* FINAL STATUS - CANCELLED */}
 
                     {booking.status === "CANCELLED" && (
                       <div className="mt-6 border-t border-gray-100 pt-5">

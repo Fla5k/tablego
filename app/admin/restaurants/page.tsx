@@ -656,6 +656,8 @@ export default function AdminRestaurantsPage() {
               onSubmit={handleSubmit}
               className="mt-6 grid gap-5 md:grid-cols-2"
             >
+              {/* NAMA */}
+
               <div>
                 <label
                   htmlFor="name"
@@ -674,10 +676,12 @@ export default function AdminRestaurantsPage() {
                     })
                   }
                   required
-                  className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:bg-white focus:ring-2 focus:ring-green-100"
                   placeholder="Contoh: TableGo Bistro"
                 />
               </div>
+
+              {/* TELEPON */}
 
               <div>
                 <label
@@ -696,10 +700,12 @@ export default function AdminRestaurantsPage() {
                       phone: event.target.value,
                     })
                   }
-                  className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:bg-white focus:ring-2 focus:ring-green-100"
                   placeholder="08xxxxxxxxxx"
                 />
               </div>
+
+              {/* ALAMAT */}
 
               <div className="md:col-span-2">
                 <label
@@ -719,10 +725,12 @@ export default function AdminRestaurantsPage() {
                     })
                   }
                   required
-                  className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:bg-white focus:ring-2 focus:ring-green-100"
                   placeholder="Contoh: Bandung, Jawa Barat"
                 />
               </div>
+
+              {/* DESKRIPSI */}
 
               <div className="md:col-span-2">
                 <label
@@ -742,10 +750,12 @@ export default function AdminRestaurantsPage() {
                     })
                   }
                   rows={4}
-                  className="mt-2 w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                  className="mt-2 w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-6 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:bg-white focus:ring-2 focus:ring-green-100"
                   placeholder="Deskripsi singkat restoran..."
                 />
               </div>
+
+              {/* URL GAMBAR */}
 
               <div className="md:col-span-2">
                 <label
@@ -765,10 +775,12 @@ export default function AdminRestaurantsPage() {
                       image: event.target.value,
                     })
                   }
-                  className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:bg-white focus:ring-2 focus:ring-green-100"
                   placeholder="https://..."
                 />
               </div>
+
+              {/* BUTTON */}
 
               <div className="flex gap-3 md:col-span-2">
                 <button

@@ -1,80 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { restaurants } from "@/lib/restaurants";
-import { useState } from "react";
 
 export default function RestaurantsPage() {
-  const router = useRouter();
-  const [loggingOut, setLoggingOut] = useState(false);
-
-  const handleLogout = async () => {
-    try {
-      setLoggingOut(true);
-
-      const response = await fetch("/api/auth/logout", {
-        method: "POST",
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || "Logout gagal.");
-      }
-
-      router.push("/login");
-      router.refresh();
-    } catch (error) {
-      console.error("Logout error:", error);
-      setLoggingOut(false);
-    }
-  };
-
   return (
     <main className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <Link href="/" className="text-2xl font-bold tracking-tight">
-            <span className="text-gray-900">Table</span>
-            <span className="text-green-500">Go</span>
-          </Link>
-
-          <nav className="flex items-center gap-2 sm:gap-3">
-            <Link
-              href="/"
-              className="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 sm:px-4"
-            >
-              Kembali
-            </Link>
-
-            <Link
-              href="/restaurants"
-              className="rounded-lg bg-green-50 px-3 py-2 text-sm font-semibold text-green-600 sm:px-4"
-            >
-              Restoran
-            </Link>
-
-            <Link
-              href="/bookings"
-              className="rounded-lg px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 hover:text-green-600 sm:px-4"
-            >
-              Booking Saya
-            </Link>
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              disabled={loggingOut}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
-            >
-              {loggingOut ? "Keluar..." : "Keluar"}
-            </button>
-          </nav>
-        </div>
-      </header>
-
       {/* Header */}
       <section className="border-b border-gray-200 bg-white px-6 py-16">
         <div className="mx-auto max-w-7xl">

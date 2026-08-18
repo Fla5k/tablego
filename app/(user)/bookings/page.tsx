@@ -23,13 +23,6 @@ type Booking = {
   };
 };
 
-type User = {
-  id: number;
-  name: string;
-  email: string;
-  phone: string | null;
-};
-
 const statusConfig = {
   PENDING: {
     label: "Menunggu Konfirmasi",
@@ -68,43 +61,31 @@ function formatTime(dateString: string) {
 export default function BookingsPage() {
   const router = useRouter();
 
-  const [user, setUser] = useState<User | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-  const [loggingOut, setLoggingOut] = useState(false);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
 
   useEffect(() => {
-    async function fetchData() {
+    async function fetchBookings() {
       try {
-        const [userResponse, bookingsResponse] = await Promise.all([
-          fetch("/api/auth/me", {
-            method: "GET",
-            credentials: "include",
-          }),
-          fetch("/api/bookings/me", {
-            method: "GET",
-            credentials: "include",
-          }),
-        ]);
+        const response = await fetch("/api/bookings/me", {
+          method: "GET",
+          credentials: "include",
+        });
 
-        const userData = await userResponse.json();
-        const bookingData = await bookingsResponse.json();
+        const data = await response.json();
 
-        if (!userResponse.ok || !userData.success || !userData.user) {
+        if (response.status === 401) {
           router.push("/login");
           return;
         }
 
-        if (!bookingsResponse.ok || !bookingData.success) {
-          throw new Error(
-            bookingData.message || "Gagal mengambil data booking.",
-          );
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || "Gagal mengambil data booking.");
         }
 
-        setUser(userData.user);
-        setBookings(bookingData.bookings);
+        setBookings(data.bookings || []);
       } catch (error) {
         console.error("Fetch bookings error:", error);
 
@@ -118,28 +99,8 @@ export default function BookingsPage() {
       }
     }
 
-    fetchData();
+    fetchBookings();
   }, [router]);
-
-  const handleLogout = async () => {
-    try {
-      setLoggingOut(true);
-
-      const response = await fetch("/api/auth/logout", {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error("Logout gagal.");
-      }
-
-      router.push("/");
-      router.refresh();
-    } catch (error) {
-      console.error("Logout error:", error);
-      setLoggingOut(false);
-    }
-  };
 
   const handleCancelBooking = async (bookingId: number) => {
     const confirmed = window.confirm(
@@ -189,47 +150,8 @@ export default function BookingsPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <Link href="/" className="text-2xl font-bold tracking-tight">
-            <span className="text-gray-900">Table</span>
-            <span className="text-green-500">Go</span>
-          </Link>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/restaurants"
-              className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-green-500"
-            >
-              Restoran
-            </Link>
-
-            <Link
-              href="/bookings"
-              className="rounded-lg bg-green-50 px-4 py-2 text-sm font-semibold text-green-600"
-            >
-              Booking Saya
-            </Link>
-
-            {user && (
-              <span className="hidden text-sm font-medium text-gray-700 sm:block">
-                Halo, {user.name}
-              </span>
-            )}
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              disabled={loggingOut}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loggingOut ? "Keluar..." : "Keluar"}
-            </button>
-          </div>
-        </div>
-      </header>
-
       <div className="mx-auto max-w-5xl px-6 py-12">
+        {/* PAGE HEADER */}
         <div>
           <p className="text-sm font-semibold uppercase tracking-wider text-green-500">
             TableGo
@@ -244,12 +166,14 @@ export default function BookingsPage() {
           </p>
         </div>
 
+        {/* LOADING */}
         {loading && (
           <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
             <p className="text-sm text-gray-500">Memuat data booking...</p>
           </div>
         )}
 
+        {/* ERROR */}
         {!loading && errorMessage && (
           <div className="mt-8 rounded-2xl border border-red-100 bg-red-50 p-6">
             <p className="font-semibold text-red-700">{errorMessage}</p>
@@ -263,6 +187,7 @@ export default function BookingsPage() {
           </div>
         )}
 
+        {/* EMPTY STATE */}
         {!loading && !errorMessage && bookings.length === 0 && (
           <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-50 text-2xl">
@@ -286,6 +211,7 @@ export default function BookingsPage() {
           </div>
         )}
 
+        {/* BOOKING LIST */}
         {!loading && !errorMessage && bookings.length > 0 && (
           <div className="mt-8 space-y-5">
             {bookings.map((booking) => {
@@ -297,6 +223,7 @@ export default function BookingsPage() {
                   className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
                 >
                   <div className="p-6">
+                    {/* RESTAURANT + STATUS */}
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
@@ -319,6 +246,7 @@ export default function BookingsPage() {
                       </span>
                     </div>
 
+                    {/* BOOKING DETAILS */}
                     <div className="mt-6 grid gap-4 border-t border-gray-100 pt-6 sm:grid-cols-3">
                       <div>
                         <p className="text-xs font-medium text-gray-400">
@@ -352,6 +280,7 @@ export default function BookingsPage() {
                       </div>
                     </div>
 
+                    {/* NOTES */}
                     {booking.notes && (
                       <div className="mt-5 rounded-xl bg-gray-50 p-4">
                         <p className="text-xs font-medium text-gray-400">
@@ -364,6 +293,7 @@ export default function BookingsPage() {
                       </div>
                     )}
 
+                    {/* CANCEL */}
                     {booking.status === "PENDING" && (
                       <div className="mt-5 border-t border-gray-100 pt-5">
                         <button
