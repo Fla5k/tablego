@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { restaurants } from "@/lib/restaurants";
 import { notFound } from "next/navigation";
-import UserNavbar from "@/components/layout/UserNavbar";
 
 interface RestaurantDetailPageProps {
   params: Promise<{
@@ -22,8 +21,6 @@ export default async function RestaurantDetailPage({
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <UserNavbar />
-
       {/* Hero Image */}
       <section className="relative h-[400px] overflow-hidden">
         <img

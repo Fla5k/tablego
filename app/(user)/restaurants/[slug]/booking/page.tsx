@@ -104,15 +104,6 @@ export default function BookingPage() {
   if (restaurantLoading) {
     return (
       <main className="min-h-screen bg-gray-50">
-        <header className="border-b border-gray-200 bg-white">
-          <div className="mx-auto flex h-16 max-w-7xl items-center px-6">
-            <div className="text-2xl font-bold tracking-tight">
-              <span className="text-gray-900">Table</span>
-              <span className="text-green-500">Go</span>
-            </div>
-          </div>
-        </header>
-
         <div className="mx-auto max-w-7xl px-6 py-16">
           <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
             <p className="text-sm text-gray-500">Memuat data restoran...</p>
@@ -125,15 +116,6 @@ export default function BookingPage() {
   if (restaurantError || !restaurant) {
     return (
       <main className="min-h-screen bg-gray-50">
-        <header className="border-b border-gray-200 bg-white">
-          <div className="mx-auto flex h-16 max-w-7xl items-center px-6">
-            <div className="text-2xl font-bold tracking-tight">
-              <span className="text-gray-900">Table</span>
-              <span className="text-green-500">Go</span>
-            </div>
-          </div>
-        </header>
-
         <div className="mx-auto max-w-7xl px-6 py-16">
           <div className="rounded-2xl border border-red-100 bg-red-50 p-8 text-center">
             <h1 className="text-xl font-bold text-red-700">
@@ -159,24 +141,6 @@ export default function BookingPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <div className="text-2xl font-bold tracking-tight">
-            <span className="text-gray-900">Table</span>
-            <span className="text-green-500">Go</span>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => router.push(`/restaurants/${slug}`)}
-            className="text-sm font-medium text-gray-600 transition hover:text-gray-900"
-          >
-            ← Kembali ke restoran
-          </button>
-        </div>
-      </header>
-
       {/* Main Content */}
       <div className="mx-auto max-w-7xl px-6 py-10">
         {/* Page Heading */}
