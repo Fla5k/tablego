@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 type Restaurant = {
@@ -22,9 +23,16 @@ export default function BookingConfirmationPage() {
   const selectedTable = searchParams.get("table");
 
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+
   const [loadingRestaurant, setLoadingRestaurant] = useState(true);
+
   const [loading, setLoading] = useState(false);
+
   const [errorMessage, setErrorMessage] = useState("");
+
+  // =========================================================
+  // FETCH RESTAURANT
+  // =========================================================
 
   useEffect(() => {
     const fetchRestaurant = async () => {
@@ -32,7 +40,10 @@ export default function BookingConfirmationPage() {
         setLoadingRestaurant(true);
         setErrorMessage("");
 
-        const response = await fetch(`/api/restaurants/${slug}`);
+        const response = await fetch(`/api/restaurants/${slug}`, {
+          cache: "no-store",
+        });
+
         const data = await response.json();
 
         if (!response.ok || !data.success || !data.restaurant) {
@@ -57,8 +68,14 @@ export default function BookingConfirmationPage() {
       }
     };
 
-    fetchRestaurant();
+    if (slug) {
+      fetchRestaurant();
+    }
   }, [slug]);
+
+  // =========================================================
+  // FORMAT DATE
+  // =========================================================
 
   const formattedDate = selectedDate
     ? new Date(`${selectedDate}T00:00:00`).toLocaleDateString("id-ID", {
@@ -67,6 +84,10 @@ export default function BookingConfirmationPage() {
         year: "numeric",
       })
     : "Belum dipilih";
+
+  // =========================================================
+  // CONFIRM BOOKING
+  // =========================================================
 
   const handleConfirm = async () => {
     if (!selectedDate || !selectedTime || !guestCount || !selectedTable) {
@@ -96,7 +117,12 @@ export default function BookingConfirmationPage() {
       setLoading(true);
       setErrorMessage("");
 
-      const bookingDate = `${selectedDate}T${selectedTime}:00`;
+      // =====================================================
+      // PENTING:
+      // Pakai timezone Indonesia secara eksplisit.
+      // =====================================================
+
+      const bookingDate = `${selectedDate}T${selectedTime}:00+07:00`;
 
       const response = await fetch("/api/bookings", {
         method: "POST",
@@ -114,20 +140,33 @@ export default function BookingConfirmationPage() {
 
       const data = await response.json();
 
-      if (!response.ok || !data.success) {
-        if (response.status === 401) {
-          router.push(
-            `/login?redirect=${encodeURIComponent(
-              `/restaurants/${slug}/booking/confirmation?${searchParams.toString()}`,
-            )}`,
-          );
-          return;
-        }
+      // =====================================================
+      // BELUM LOGIN
+      // =====================================================
 
+      if (response.status === 401) {
+        router.push(
+          `/login?redirect=${encodeURIComponent(
+            `/restaurants/${slug}/booking/confirmation?${searchParams.toString()}`,
+          )}`,
+        );
+
+        return;
+      }
+
+      // =====================================================
+      // ERROR
+      // =====================================================
+
+      if (!response.ok || !data.success) {
         throw new Error(
           data.message || "Gagal membuat booking. Silakan coba lagi.",
         );
       }
+
+      // =====================================================
+      // BOOKING BERHASIL
+      // =====================================================
 
       const bookingCode = `TG-${String(data.booking.id).padStart(6, "0")}`;
 
@@ -153,9 +192,15 @@ export default function BookingConfirmationPage() {
     }
   };
 
+  // =========================================================
+  // UI
+  // =========================================================
+
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-3xl px-6 py-12">
+        {/* HEADER */}
+
         <div className="text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
             <span className="text-2xl font-bold text-green-600">✓</span>
@@ -174,6 +219,8 @@ export default function BookingConfirmationPage() {
           </p>
         </div>
 
+        {/* CARD */}
+
         <div className="mt-10 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           {loadingRestaurant ? (
             <div className="py-10 text-center">
@@ -181,6 +228,8 @@ export default function BookingConfirmationPage() {
             </div>
           ) : (
             <>
+              {/* RESTAURANT */}
+
               <div className="border-b border-gray-100 pb-6">
                 <p className="text-sm text-gray-500">Restoran</p>
 
@@ -192,6 +241,8 @@ export default function BookingConfirmationPage() {
                   {restaurant?.address || "Alamat tidak tersedia"}
                 </p>
               </div>
+
+              {/* DETAIL */}
 
               <div className="grid gap-6 py-6 sm:grid-cols-2">
                 <div>
@@ -227,6 +278,8 @@ export default function BookingConfirmationPage() {
                 </div>
               </div>
 
+              {/* INFO */}
+
               <div className="rounded-xl bg-green-50 p-4">
                 <p className="text-sm font-medium text-green-700">
                   Data booking sudah siap dikonfirmasi.
@@ -237,6 +290,8 @@ export default function BookingConfirmationPage() {
                 </p>
               </div>
 
+              {/* ERROR */}
+
               {errorMessage && (
                 <div className="mt-4 rounded-xl bg-red-50 p-4">
                   <p className="text-sm font-medium text-red-600">
@@ -244,6 +299,8 @@ export default function BookingConfirmationPage() {
                   </p>
                 </div>
               )}
+
+              {/* BUTTON */}
 
               <div className="mt-6 space-y-3">
                 <button

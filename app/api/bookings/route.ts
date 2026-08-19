@@ -6,6 +6,10 @@ const SESSION_COOKIE = "tablego_session";
 
 export async function POST(request: Request) {
   try {
+    // =========================================================
+    // CEK SESSION
+    // =========================================================
+
     const cookieStore = await cookies();
     const session = cookieStore.get(SESSION_COOKIE);
 
@@ -30,6 +34,10 @@ export async function POST(request: Request) {
         { status: 401 },
       );
     }
+
+    // =========================================================
+    // BACA REQUEST
+    // =========================================================
 
     const body = await request.json();
 
@@ -56,6 +64,10 @@ export async function POST(request: Request) {
       );
     }
 
+    // =========================================================
+    // PARSE BOOKING DATE
+    // =========================================================
+
     const parsedBookingDate = new Date(bookingDate);
 
     if (Number.isNaN(parsedBookingDate.getTime())) {
@@ -68,11 +80,15 @@ export async function POST(request: Request) {
       );
     }
 
+    // =========================================================
+    // CEK BOOKING DI DALAM TRANSACTION
+    // =========================================================
+
     const booking = await prisma.$transaction(
       async (tx) => {
-        // =========================
-        // CEK USER
-        // =========================
+        // -----------------------------------------------------
+        // USER
+        // -----------------------------------------------------
 
         const user = await tx.user.findUnique({
           where: {
@@ -92,13 +108,17 @@ export async function POST(request: Request) {
           throw new Error("ADMIN_BOOKING_NOT_ALLOWED");
         }
 
-        // =========================
-        // CEK RESTORAN
-        // =========================
+        // -----------------------------------------------------
+        // RESTAURANT
+        // -----------------------------------------------------
 
         const restaurant = await tx.restaurant.findUnique({
           where: {
             id: restaurantId,
+          },
+          select: {
+            id: true,
+            name: true,
           },
         });
 
@@ -106,14 +126,19 @@ export async function POST(request: Request) {
           throw new Error("RESTAURANT_NOT_FOUND");
         }
 
-        // =========================
-        // CEK MEJA
-        // =========================
+        // -----------------------------------------------------
+        // TABLE
+        // -----------------------------------------------------
 
         const table = await tx.restaurantTable.findFirst({
           where: {
             id: tableId,
             restaurantId,
+          },
+          select: {
+            id: true,
+            tableNumber: true,
+            capacity: true,
           },
         });
 
@@ -121,32 +146,31 @@ export async function POST(request: Request) {
           throw new Error("TABLE_NOT_FOUND");
         }
 
-        // =========================
-        // CEK KAPASITAS
-        // =========================
+        // -----------------------------------------------------
+        // KAPASITAS
+        // -----------------------------------------------------
 
         if (guestCount > table.capacity) {
           throw new Error("TABLE_CAPACITY_EXCEEDED");
         }
 
-        // =========================
-        // CEK BENTROK BOOKING
-        // =========================
-        //
-        // Hanya PENDING dan CONFIRMED
-        // yang membuat meja dianggap terpakai.
-        //
-        // COMPLETED dan CANCELLED
-        // tidak menghalangi booking baru.
-        // =========================
+        // -----------------------------------------------------
+        // CEK BOOKING YANG BENTROK
+        // -----------------------------------------------------
 
         const existingBooking = await tx.booking.findFirst({
           where: {
+            restaurantId,
             tableId,
             bookingDate: parsedBookingDate,
             status: {
               in: ["PENDING", "CONFIRMED"],
             },
+          },
+          select: {
+            id: true,
+            bookingDate: true,
+            status: true,
           },
         });
 
@@ -154,9 +178,9 @@ export async function POST(request: Request) {
           throw new Error("BOOKING_CONFLICT");
         }
 
-        // =========================
-        // BUAT BOOKING
-        // =========================
+        // -----------------------------------------------------
+        // CREATE BOOKING
+        // -----------------------------------------------------
 
         return tx.booking.create({
           data: {
@@ -178,6 +202,10 @@ export async function POST(request: Request) {
       },
     );
 
+    // =========================================================
+    // SUCCESS
+    // =========================================================
+
     return NextResponse.json(
       {
         success: true,
@@ -188,6 +216,10 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error("Create booking error:", error);
+
+    // =========================================================
+    // CUSTOM ERRORS
+    // =========================================================
 
     if (error instanceof Error) {
       switch (error.message) {
@@ -240,14 +272,18 @@ export async function POST(request: Request) {
           return NextResponse.json(
             {
               success: false,
-              message: "Meja tersebut sudah dibooking pada waktu tersebut.",
+              message:
+                "Meja tersebut sudah dibooking pada waktu tersebut.",
             },
             { status: 409 },
           );
       }
     }
 
-    // Prisma error P2034 = transaction conflict / serialization failure.
+    // =========================================================
+    // PRISMA SERIALIZATION CONFLICT
+    // =========================================================
+
     if (
       typeof error === "object" &&
       error !== null &&
@@ -263,6 +299,10 @@ export async function POST(request: Request) {
         { status: 409 },
       );
     }
+
+    // =========================================================
+    // GENERAL ERROR
+    // =========================================================
 
     return NextResponse.json(
       {

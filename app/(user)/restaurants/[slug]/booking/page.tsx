@@ -22,6 +22,7 @@ export default function BookingPage() {
   const slug = params.slug as string;
 
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+
   const [restaurantLoading, setRestaurantLoading] = useState(true);
   const [restaurantError, setRestaurantError] = useState("");
 
@@ -29,6 +30,7 @@ export default function BookingPage() {
   const [selectedTime, setSelectedTime] = useState("19:00");
   const [selectedTable, setSelectedTable] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState("");
+
   const [errorMessage, setErrorMessage] = useState("");
 
   const timeSlots = [
@@ -43,13 +45,19 @@ export default function BookingPage() {
     "21:00",
   ];
 
+  // =========================================================
+  // LOAD RESTAURANT
+  // =========================================================
+
   useEffect(() => {
     async function fetchRestaurant() {
       try {
         setRestaurantLoading(true);
         setRestaurantError("");
 
-        const response = await fetch(`/api/restaurants/${slug}`);
+        const response = await fetch(`/api/restaurants/${slug}`, {
+          cache: "no-store",
+        });
 
         const data = await response.json();
 
@@ -76,6 +84,10 @@ export default function BookingPage() {
     }
   }, [slug]);
 
+  // =========================================================
+  // CONTINUE
+  // =========================================================
+
   const handleContinue = () => {
     if (!selectedDate) {
       setErrorMessage("Silakan pilih tanggal terlebih dahulu.");
@@ -101,6 +113,10 @@ export default function BookingPage() {
     );
   };
 
+  // =========================================================
+  // LOADING
+  // =========================================================
+
   if (restaurantLoading) {
     return (
       <main className="min-h-screen bg-gray-50">
@@ -112,6 +128,10 @@ export default function BookingPage() {
       </main>
     );
   }
+
+  // =========================================================
+  // ERROR
+  // =========================================================
 
   if (restaurantError || !restaurant) {
     return (
@@ -139,11 +159,14 @@ export default function BookingPage() {
     );
   }
 
+  // =========================================================
+  // MAIN
+  // =========================================================
+
   return (
     <main className="min-h-screen bg-gray-50">
-      {/* Main Content */}
       <div className="mx-auto max-w-7xl px-6 py-10">
-        {/* Page Heading */}
+        {/* Heading */}
         <div className="mb-8">
           <p className="text-sm font-semibold uppercase tracking-wider text-green-500">
             Booking Meja
@@ -158,11 +181,13 @@ export default function BookingPage() {
           </p>
         </div>
 
-        {/* Main Grid */}
         <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_400px]">
-          {/* LEFT COLUMN */}
+          {/* =================================================
+              LEFT
+          ================================================= */}
+
           <div className="space-y-6">
-            {/* Date */}
+            {/* DATE */}
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-3">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-sm font-bold text-white">
@@ -177,8 +202,9 @@ export default function BookingPage() {
               <input
                 type="date"
                 value={selectedDate}
-                onChange={(e) => {
-                  setSelectedDate(e.target.value);
+                min={new Date().toLocaleDateString("en-CA")}
+                onChange={(event) => {
+                  setSelectedDate(event.target.value);
                   setSelectedTable(null);
                   setErrorMessage("");
                 }}
@@ -186,7 +212,7 @@ export default function BookingPage() {
               />
             </div>
 
-            {/* Time */}
+            {/* TIME */}
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-3">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-sm font-bold text-white">
@@ -220,7 +246,7 @@ export default function BookingPage() {
               </div>
             </div>
 
-            {/* Guests */}
+            {/* GUEST */}
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-3">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-sm font-bold text-white">
@@ -265,7 +291,7 @@ export default function BookingPage() {
               </div>
             </div>
 
-            {/* Summary */}
+            {/* SUMMARY */}
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="flex items-start justify-between gap-6">
                 <div>
@@ -284,7 +310,6 @@ export default function BookingPage() {
               </div>
 
               <div className="mt-6 grid gap-4 border-t border-gray-100 pt-5 sm:grid-cols-4">
-                {/* Tanggal */}
                 <div>
                   <p className="text-xs text-gray-500">Tanggal</p>
 
@@ -293,7 +318,6 @@ export default function BookingPage() {
                   </p>
                 </div>
 
-                {/* Waktu */}
                 <div>
                   <p className="text-xs text-gray-500">Waktu</p>
 
@@ -302,7 +326,6 @@ export default function BookingPage() {
                   </p>
                 </div>
 
-                {/* Tamu */}
                 <div>
                   <p className="text-xs text-gray-500">Tamu</p>
 
@@ -311,7 +334,6 @@ export default function BookingPage() {
                   </p>
                 </div>
 
-                {/* Meja */}
                 <div>
                   <p className="text-xs text-gray-500">Meja</p>
 
@@ -321,14 +343,12 @@ export default function BookingPage() {
                 </div>
               </div>
 
-              {/* Error Message */}
               {errorMessage && (
                 <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-center text-sm font-medium text-red-500">
                   {errorMessage}
                 </p>
               )}
 
-              {/* Continue Button */}
               <button
                 type="button"
                 onClick={handleContinue}
@@ -343,7 +363,10 @@ export default function BookingPage() {
             </div>
           </div>
 
-          {/* RIGHT COLUMN */}
+          {/* =================================================
+              RIGHT
+          ================================================= */}
+
           <aside className="lg:sticky lg:top-6">
             <TableSelector
               slug={slug}
