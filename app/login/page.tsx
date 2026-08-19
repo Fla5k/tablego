@@ -11,12 +11,19 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  const [showResend, setShowResend] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     setErrorMessage("");
+    setSuccessMessage("");
+    setShowResend(false);
 
     if (!email || !password) {
       setErrorMessage("Email dan password wajib diisi.");
@@ -40,7 +47,16 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.message || "Login gagal.");
+        const message = data.message || "Login gagal.";
+
+        if (
+          message.toLowerCase().includes("belum diverifikasi") ||
+          message.toLowerCase().includes("verifikasi")
+        ) {
+          setShowResend(true);
+        }
+
+        throw new Error(message);
       }
 
       if (data.user?.role === "ADMIN") {
@@ -58,6 +74,51 @@ export default function LoginPage() {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    if (!email) {
+      setErrorMessage("Masukkan email terlebih dahulu.");
+      return;
+    }
+
+    try {
+      setResendLoading(true);
+
+      const response = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || "Gagal mengirim ulang email verifikasi.",
+        );
+      }
+
+      setSuccessMessage(data.message);
+      setShowResend(false);
+    } catch (error) {
+      console.error("Resend verification error:", error);
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Terjadi kesalahan saat mengirim ulang email verifikasi.",
+      );
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -119,7 +180,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="nama@email.com"
-                  disabled={loading}
+                  disabled={loading || resendLoading}
                   className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
                 />
               </div>
@@ -139,7 +200,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="Masukkan password"
-                  disabled={loading}
+                  disabled={loading || resendLoading}
                   className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
                 />
               </div>
@@ -153,15 +214,49 @@ export default function LoginPage() {
                 </div>
               )}
 
+              {/* Success */}
+              {successMessage && (
+                <div className="rounded-xl bg-green-50 p-4">
+                  <p className="text-sm font-medium text-green-700">
+                    {successMessage}
+                  </p>
+                </div>
+              )}
+
               {/* Submit */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || resendLoading}
                 className="w-full rounded-xl bg-green-500 px-5 py-3.5 font-semibold text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-300"
               >
                 {loading ? "Memproses..." : "Masuk"}
               </button>
             </form>
+
+            {/* Resend Verification */}
+            {showResend && (
+              <div className="mt-5 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
+                <p className="text-sm font-semibold text-yellow-800">
+                  Email belum diverifikasi
+                </p>
+
+                <p className="mt-1 text-xs leading-5 text-yellow-700">
+                  Belum menerima email verifikasi? Kirim ulang ke email{" "}
+                  <strong>{email}</strong>.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={resendLoading}
+                  className="mt-3 w-full rounded-xl border border-yellow-300 bg-white px-4 py-3 text-sm font-semibold text-yellow-800 transition hover:bg-yellow-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {resendLoading
+                    ? "Mengirim email..."
+                    : "Kirim ulang email verifikasi"}
+                </button>
+              </div>
+            )}
 
             {/* Register */}
             <div className="mt-6 border-t border-gray-100 pt-6 text-center">

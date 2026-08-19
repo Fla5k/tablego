@@ -4,8 +4,6 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type UserRole = "CUSTOMER" | "ADMIN";
-
 function validatePassword(password: string) {
   return {
     length: password.length >= 12,
@@ -19,12 +17,8 @@ function validatePassword(password: string) {
 export default function RegisterPage() {
   const router = useRouter();
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("CUSTOMER");
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -45,11 +39,20 @@ export default function RegisterPage() {
     setErrorMessage("");
     setSuccessMessage("");
 
-    const normalizedName = name.trim();
-    const normalizedEmail = email.trim().toLowerCase();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
 
-    if (!normalizedName || !normalizedEmail || !password || !confirmPassword) {
-      setErrorMessage("Silakan lengkapi semua data wajib.");
+    const normalizedName = String(formData.get("name") || "").trim();
+    const normalizedEmail = String(formData.get("email") || "")
+      .trim()
+      .toLowerCase();
+    const normalizedPhone = String(formData.get("phone") || "").trim();
+    const formPassword = String(formData.get("password") || "");
+    const formConfirmPassword = String(formData.get("confirmPassword") || "");
+
+    // Pastikan data benar-benar terbaca dari form
+    if (!normalizedName || !normalizedEmail || !formPassword) {
+      setErrorMessage("Silakan isi nama, email, dan password.");
       return;
     }
 
@@ -58,7 +61,7 @@ export default function RegisterPage() {
       return;
     }
 
-    if (password !== confirmPassword) {
+    if (formPassword !== formConfirmPassword) {
       setErrorMessage("Konfirmasi password tidak cocok.");
       return;
     }
@@ -74,9 +77,8 @@ export default function RegisterPage() {
         body: JSON.stringify({
           name: normalizedName,
           email: normalizedEmail,
-          phone: phone.trim(),
-          password,
-          role,
+          phone: normalizedPhone,
+          password: formPassword,
         }),
       });
 
@@ -87,8 +89,12 @@ export default function RegisterPage() {
       }
 
       setSuccessMessage(
-        "Registrasi berhasil. Silakan verifikasi email kamu sebelum login.",
+        "Registrasi berhasil! Silakan cek email kamu untuk melakukan verifikasi.",
       );
+
+      form.reset();
+      setPassword("");
+      setConfirmPassword("");
 
       setTimeout(() => {
         router.push(
@@ -151,65 +157,6 @@ export default function RegisterPage() {
           {/* Card */}
           <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
             <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Role */}
-              <div>
-                <label className="text-sm font-medium text-gray-700">
-                  Daftar Sebagai
-                </label>
-
-                <div className="mt-2 grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() => setRole("CUSTOMER")}
-                    className={`rounded-xl border px-4 py-4 text-left transition ${
-                      role === "CUSTOMER"
-                        ? "border-green-500 bg-green-50 ring-2 ring-green-100"
-                        : "border-gray-200 bg-white hover:border-green-300 hover:bg-green-50"
-                    }`}
-                  >
-                    <p
-                      className={`font-semibold ${
-                        role === "CUSTOMER" ? "text-green-700" : "text-gray-900"
-                      }`}
-                    >
-                      Customer
-                    </p>
-
-                    <p className="mt-1 text-xs text-gray-500">
-                      Untuk melakukan booking meja.
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() => setRole("ADMIN")}
-                    className={`rounded-xl border px-4 py-4 text-left transition ${
-                      role === "ADMIN"
-                        ? "border-green-500 bg-green-50 ring-2 ring-green-100"
-                        : "border-gray-200 bg-white hover:border-green-300 hover:bg-green-50"
-                    }`}
-                  >
-                    <p
-                      className={`font-semibold ${
-                        role === "ADMIN" ? "text-green-700" : "text-gray-900"
-                      }`}
-                    >
-                      Admin
-                    </p>
-
-                    <p className="mt-1 text-xs text-gray-500">
-                      Untuk mengelola TableGo.
-                    </p>
-                  </button>
-                </div>
-
-                <p className="mt-2 text-xs text-gray-400">
-                  Pilih jenis akun yang ingin kamu buat.
-                </p>
-              </div>
-
               {/* Name */}
               <div>
                 <label
@@ -221,12 +168,12 @@ export default function RegisterPage() {
 
                 <input
                   id="name"
+                  name="name"
                   type="text"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
                   placeholder="Masukkan nama lengkap"
                   disabled={loading}
                   autoComplete="name"
+                  required
                   className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
                 />
               </div>
@@ -242,9 +189,8 @@ export default function RegisterPage() {
 
                 <input
                   id="email"
+                  name="email"
                   type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
                   placeholder="nama@email.com"
                   disabled={loading}
                   autoComplete="email"
@@ -270,9 +216,8 @@ export default function RegisterPage() {
 
                 <input
                   id="phone"
+                  name="phone"
                   type="tel"
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
                   placeholder="08xxxxxxxxxx"
                   disabled={loading}
                   autoComplete="tel"
@@ -291,14 +236,15 @@ export default function RegisterPage() {
 
                 <input
                   id="password"
+                  name="password"
                   type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
                   placeholder="Buat password yang kuat"
                   disabled={loading}
                   autoComplete="new-password"
                   required
                   minLength={12}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
                   className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
                 />
 
@@ -348,14 +294,15 @@ export default function RegisterPage() {
 
                 <input
                   id="confirmPassword"
+                  name="confirmPassword"
                   type="password"
-                  value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
                   placeholder="Ulangi password"
                   disabled={loading}
                   autoComplete="new-password"
                   required
                   minLength={12}
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
                   className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
                 />
 

@@ -26,19 +26,23 @@ export async function GET(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          message: "Token verifikasi tidak valid.",
+          message: "Token verifikasi tidak valid atau sudah tidak tersedia.",
         },
         { status: 400 },
       );
     }
 
+    // Kalau request kedua masuk setelah request pertama berhasil,
+    // jangan dianggap sebagai error.
     if (user.emailVerified) {
       return NextResponse.json({
         success: true,
+        alreadyVerified: true,
         message: "Email sudah diverifikasi sebelumnya.",
       });
     }
 
+    // Cek masa berlaku token
     if (
       !user.emailVerificationExpiresAt ||
       user.emailVerificationExpiresAt.getTime() < Date.now()
@@ -53,19 +57,21 @@ export async function GET(request: Request) {
       );
     }
 
+    // Tandai email sebagai terverifikasi.
+    // Token TIDAK langsung dihapus agar request kedua
+    // dari React Strict Mode tidak menghasilkan error.
     await prisma.user.update({
       where: {
         id: user.id,
       },
       data: {
         emailVerified: true,
-        emailVerificationToken: null,
-        emailVerificationExpiresAt: null,
       },
     });
 
     return NextResponse.json({
       success: true,
+      alreadyVerified: false,
       message: "Email berhasil diverifikasi.",
     });
   } catch (error) {
