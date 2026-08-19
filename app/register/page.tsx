@@ -6,6 +6,16 @@ import { useRouter } from "next/navigation";
 
 type UserRole = "CUSTOMER" | "ADMIN";
 
+function validatePassword(password: string) {
+  return {
+    length: password.length >= 12,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    number: /[0-9]/.test(password),
+    special: /[^A-Za-z0-9]/.test(password),
+  };
+}
+
 export default function RegisterPage() {
   const router = useRouter();
 
@@ -20,19 +30,31 @@ export default function RegisterPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
+  const passwordRules = validatePassword(password);
+
+  const isPasswordValid =
+    passwordRules.length &&
+    passwordRules.uppercase &&
+    passwordRules.lowercase &&
+    passwordRules.number &&
+    passwordRules.special;
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     setErrorMessage("");
     setSuccessMessage("");
 
-    if (!name || !email || !password || !confirmPassword) {
+    const normalizedName = name.trim();
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedName || !normalizedEmail || !password || !confirmPassword) {
       setErrorMessage("Silakan lengkapi semua data wajib.");
       return;
     }
 
-    if (password.length < 6) {
-      setErrorMessage("Password minimal 6 karakter.");
+    if (!isPasswordValid) {
+      setErrorMessage("Password belum memenuhi semua persyaratan keamanan.");
       return;
     }
 
@@ -50,9 +72,9 @@ export default function RegisterPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name,
-          email,
-          phone,
+          name: normalizedName,
+          email: normalizedEmail,
+          phone: phone.trim(),
           password,
           role,
         }),
@@ -65,11 +87,13 @@ export default function RegisterPage() {
       }
 
       setSuccessMessage(
-        "Registrasi berhasil! Kamu akan diarahkan ke halaman login.",
+        "Registrasi berhasil. Silakan verifikasi email kamu sebelum login.",
       );
 
       setTimeout(() => {
-        router.push("/login");
+        router.push(
+          `/verify-email?email=${encodeURIComponent(normalizedEmail)}`,
+        );
       }, 1500);
     } catch (error) {
       console.error("Register error:", error);
@@ -202,6 +226,7 @@ export default function RegisterPage() {
                   onChange={(event) => setName(event.target.value)}
                   placeholder="Masukkan nama lengkap"
                   disabled={loading}
+                  autoComplete="name"
                   className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
                 />
               </div>
@@ -222,8 +247,15 @@ export default function RegisterPage() {
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="nama@email.com"
                   disabled={loading}
+                  autoComplete="email"
+                  required
                   className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
                 />
+
+                <p className="mt-2 text-xs text-gray-400">
+                  Gunakan email yang benar dan bisa kamu akses untuk verifikasi
+                  akun.
+                </p>
               </div>
 
               {/* Phone */}
@@ -243,6 +275,7 @@ export default function RegisterPage() {
                   onChange={(event) => setPhone(event.target.value)}
                   placeholder="08xxxxxxxxxx"
                   disabled={loading}
+                  autoComplete="tel"
                   className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
                 />
               </div>
@@ -261,10 +294,47 @@ export default function RegisterPage() {
                   type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  placeholder="Minimal 6 karakter"
+                  placeholder="Buat password yang kuat"
                   disabled={loading}
+                  autoComplete="new-password"
+                  required
+                  minLength={12}
                   className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
                 />
+
+                {/* Password Requirements */}
+                <div className="mt-3 rounded-xl bg-gray-50 p-4">
+                  <p className="text-xs font-semibold text-gray-700">
+                    Persyaratan password:
+                  </p>
+
+                  <div className="mt-2 space-y-1.5">
+                    <PasswordRequirement
+                      valid={passwordRules.length}
+                      text="Minimal 12 karakter"
+                    />
+
+                    <PasswordRequirement
+                      valid={passwordRules.uppercase}
+                      text="Mengandung huruf besar (A-Z)"
+                    />
+
+                    <PasswordRequirement
+                      valid={passwordRules.lowercase}
+                      text="Mengandung huruf kecil (a-z)"
+                    />
+
+                    <PasswordRequirement
+                      valid={passwordRules.number}
+                      text="Mengandung angka (0-9)"
+                    />
+
+                    <PasswordRequirement
+                      valid={passwordRules.special}
+                      text="Mengandung karakter khusus (!@#$%^&*)"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Confirm Password */}
@@ -283,8 +353,25 @@ export default function RegisterPage() {
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   placeholder="Ulangi password"
                   disabled={loading}
+                  autoComplete="new-password"
+                  required
+                  minLength={12}
                   className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
                 />
+
+                {confirmPassword && (
+                  <p
+                    className={`mt-2 text-xs font-medium ${
+                      password === confirmPassword
+                        ? "text-green-600"
+                        : "text-red-500"
+                    }`}
+                  >
+                    {password === confirmPassword
+                      ? "✓ Password cocok"
+                      : "✕ Password belum cocok"}
+                  </p>
+                )}
               </div>
 
               {/* Error */}
@@ -330,10 +417,34 @@ export default function RegisterPage() {
           </div>
 
           <p className="mt-6 text-center text-xs text-gray-400">
-            🔒 Data akun kamu disimpan dengan aman.
+            🔒 Akun harus diverifikasi melalui email sebelum dapat digunakan.
           </p>
         </div>
       </div>
     </main>
+  );
+}
+
+function PasswordRequirement({
+  valid,
+  text,
+}: {
+  valid: boolean;
+  text: string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span
+        className={`flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold ${
+          valid ? "bg-green-500 text-white" : "bg-gray-200 text-gray-400"
+        }`}
+      >
+        {valid ? "✓" : ""}
+      </span>
+
+      <span className={`text-xs ${valid ? "text-green-700" : "text-gray-500"}`}>
+        {text}
+      </span>
+    </div>
   );
 }

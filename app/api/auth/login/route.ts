@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = String(email).trim().toLowerCase();
 
     const user = await prisma.user.findUnique({
       where: {
@@ -46,6 +46,18 @@ export async function POST(request: Request) {
           message: "Email atau password salah.",
         },
         { status: 401 },
+      );
+    }
+
+    if (!user.emailVerified) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Email kamu belum diverifikasi. Silakan cek inbox email dan lakukan verifikasi terlebih dahulu.",
+          emailNotVerified: true,
+        },
+        { status: 403 },
       );
     }
 
