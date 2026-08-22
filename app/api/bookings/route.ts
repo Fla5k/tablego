@@ -155,7 +155,36 @@ export async function POST(request: Request) {
         }
 
         // -----------------------------------------------------
-        // CEK BOOKING YANG BENTROK
+        // CEK SPAM BOOKING USER
+        //
+        // Satu user hanya boleh memiliki satu booking aktif
+        // pada restoran dan tanggal yang sama.
+        //
+        // PENDING dan CONFIRMED sama-sama dianggap aktif.
+        // -----------------------------------------------------
+
+        const existingUserBooking = await tx.booking.findFirst({
+          where: {
+            userId: user.id,
+            restaurantId,
+            bookingDate: parsedBookingDate,
+            status: {
+              in: ["PENDING", "CONFIRMED"],
+            },
+          },
+          select: {
+            id: true,
+            bookingDate: true,
+            status: true,
+          },
+        });
+
+        if (existingUserBooking) {
+          throw new Error("USER_BOOKING_CONFLICT");
+        }
+
+        // -----------------------------------------------------
+        // CEK BOOKING MEJA YANG BENTROK
         // -----------------------------------------------------
 
         const existingBooking = await tx.booking.findFirst({
@@ -266,6 +295,16 @@ export async function POST(request: Request) {
               message: "Jumlah tamu melebihi kapasitas meja.",
             },
             { status: 400 },
+          );
+
+        case "USER_BOOKING_CONFLICT":
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "Kamu sudah memiliki booking di restoran ini pada tanggal tersebut.",
+            },
+            { status: 409 },
           );
 
         case "BOOKING_CONFLICT":
