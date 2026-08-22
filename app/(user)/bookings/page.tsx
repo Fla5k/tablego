@@ -8,7 +8,7 @@ type Booking = {
   id: number;
   bookingDate: string;
   guestCount: number;
-  status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
+  status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED" | "EXPIRED";
   notes: string | null;
   restaurant: {
     id: number;
@@ -39,6 +39,10 @@ const statusConfig = {
   CANCELLED: {
     label: "Dibatalkan",
     className: "bg-red-50 text-red-700",
+  },
+  EXPIRED: {
+    label: "Kedaluwarsa",
+    className: "bg-gray-100 text-gray-600",
   },
 };
 

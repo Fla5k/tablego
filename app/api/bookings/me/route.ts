@@ -6,6 +6,10 @@ const SESSION_COOKIE = "tablego_session";
 
 export async function GET() {
   try {
+    // =========================================================
+    // CEK SESSION
+    // =========================================================
+
     const cookieStore = await cookies();
     const session = cookieStore.get(SESSION_COOKIE);
 
@@ -30,6 +34,36 @@ export async function GET() {
         { status: 401 },
       );
     }
+
+    // =========================================================
+    // UPDATE BOOKING YANG SUDAH EXPIRED
+    // =========================================================
+    //
+    // Hanya booking PENDING yang akan menjadi EXPIRED.
+    // Booking CONFIRMED tidak akan berubah.
+    //
+    // Jika waktu booking sudah lewat dari waktu sekarang,
+    // maka booking dianggap kadaluarsa.
+    // =========================================================
+
+    const now = new Date();
+
+    await prisma.booking.updateMany({
+      where: {
+        userId,
+        status: "PENDING",
+        bookingDate: {
+          lt: now,
+        },
+      },
+      data: {
+        status: "EXPIRED",
+      },
+    });
+
+    // =========================================================
+    // AMBIL DATA BOOKING USER
+    // =========================================================
 
     const bookings = await prisma.booking.findMany({
       where: {
@@ -56,6 +90,10 @@ export async function GET() {
         },
       },
     });
+
+    // =========================================================
+    // RESPONSE
+    // =========================================================
 
     return NextResponse.json(
       {
