@@ -1,5 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/lib/generated/prisma/client";
+import bcrypt from "bcryptjs";
 import "dotenv/config";
 
 const connectionString = process.env.DATABASE_URL;
@@ -21,6 +22,8 @@ async function main() {
   // USER
   // =========================
 
+  const hashedPassword = await bcrypt.hash("password123", 12);
+
   let user = await prisma.user.findFirst({
     where: {
       email: "test@tablego.com",
@@ -32,7 +35,7 @@ async function main() {
       data: {
         name: "Test User",
         email: "test@tablego.com",
-        password: "password123",
+        password: hashedPassword,
       },
     });
 
@@ -44,7 +47,7 @@ async function main() {
       },
       data: {
         name: "Test User",
-        password: "password123",
+        password: hashedPassword,
       },
     });
 
