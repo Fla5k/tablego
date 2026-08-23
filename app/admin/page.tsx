@@ -40,14 +40,6 @@ type Restaurant = {
   };
 };
 
-type AdminUser = {
-  id: number;
-  name: string;
-  email: string;
-  phone: string | null;
-  role: "ADMIN";
-};
-
 const statusConfig: Record<
   BookingStatus,
   {
@@ -92,7 +84,6 @@ function formatTime(dateString: string) {
 export default function AdminPage() {
   const router = useRouter();
 
-  const [admin, setAdmin] = useState<AdminUser | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
 
@@ -121,8 +112,6 @@ export default function AdminPage() {
           router.push("/restaurants");
           return;
         }
-
-        setAdmin(userData.user);
 
         const [bookingResponse, restaurantResponse] = await Promise.all([
           fetch("/api/admin/bookings", {
