@@ -20,6 +20,30 @@ export async function GET(
     const time = url.searchParams.get("time");
 
     // =========================================================
+    // PARSE WAKTU BOOKING
+    // =========================================================
+
+    let selectedDateTime: Date | null = null;
+
+    if (date && time) {
+      const dateTimeString = `${date}T${time}:00+07:00`;
+
+      const parsedDateTime = new Date(dateTimeString);
+
+      if (Number.isNaN(parsedDateTime.getTime())) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Tanggal atau waktu tidak valid.",
+          },
+          { status: 400 },
+        );
+      }
+
+      selectedDateTime = parsedDateTime;
+    }
+
+    // =========================================================
     // CARI RESTORAN
     // =========================================================
 
@@ -61,32 +85,10 @@ export async function GET(
     }
 
     // =========================================================
-    // PARSE WAKTU BOOKING
-    // =========================================================
-
-    let selectedDateTime: Date | null = null;
-
-    if (date && time) {
-      const dateTimeString = `${date}T${time}:00+07:00`;
-
-      const parsedDateTime = new Date(dateTimeString);
-
-      if (Number.isNaN(parsedDateTime.getTime())) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Tanggal atau waktu tidak valid.",
-          },
-          { status: 400 },
-        );
-      }
-
-      selectedDateTime = parsedDateTime;
-    }
-
-    // =========================================================
     // CEK KETERSEDIAAN MEJA
     // =========================================================
+
+    const now = new Date();
 
     const tables = restaurant.tables.map((table) => {
       let available = true;
@@ -95,9 +97,22 @@ export async function GET(
         available = !table.bookings.some((booking) => {
           const bookingDate = new Date(booking.bookingDate);
 
-          return (
-            bookingDate.getTime() === selectedDateTime!.getTime()
-          );
+          // ---------------------------------------------------
+          // BOOKING YANG SUDAH LEWAT TIDAK MENGUNCI MEJA
+          // ---------------------------------------------------
+
+          if (
+            booking.status === "PENDING" &&
+            bookingDate.getTime() < now.getTime()
+          ) {
+            return false;
+          }
+
+          // ---------------------------------------------------
+          // BOOKING HANYA BENTROK JIKA WAKTUNYA SAMA
+          // ---------------------------------------------------
+
+          return bookingDate.getTime() === selectedDateTime.getTime();
         });
       }
 

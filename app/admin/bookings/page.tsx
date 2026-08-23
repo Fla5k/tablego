@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type BookingStatus = "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
+type BookingStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "EXPIRED";
 
 type Booking = {
   id: number;
@@ -72,6 +77,11 @@ const statusConfig: Record<
   CANCELLED: {
     label: "Dibatalkan",
     className: "bg-red-50 text-red-700",
+  },
+
+  EXPIRED: {
+    label: "Kadaluarsa",
+    className: "bg-gray-100 text-gray-600",
   },
 };
 
@@ -235,8 +245,18 @@ export default function AdminBookingsPage() {
     [fetchAdminUser, fetchBookings],
   );
 
+  // =========================
+  // INITIAL LOAD
+  // =========================
+
   useEffect(() => {
-    loadData();
+    const timer = window.setTimeout(() => {
+      void loadData();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [loadData]);
 
   // =========================
@@ -359,6 +379,10 @@ export default function AdminBookingsPage() {
     (booking) => booking.status === "CANCELLED",
   ).length;
 
+  const expiredCount = bookings.filter(
+    (booking) => booking.status === "EXPIRED",
+  ).length;
+
   // =========================
   // RESET FILTER
   // =========================
@@ -420,7 +444,7 @@ export default function AdminBookingsPage() {
             SUMMARY
         ========================= */}
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <p className="text-sm font-medium text-gray-500">
               Menunggu Konfirmasi
@@ -452,6 +476,14 @@ export default function AdminBookingsPage() {
 
             <p className="mt-2 text-3xl font-bold text-red-600">
               {cancelledCount}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <p className="text-sm font-medium text-gray-500">Kadaluarsa</p>
+
+            <p className="mt-2 text-3xl font-bold text-gray-500">
+              {expiredCount}
             </p>
           </div>
         </div>
@@ -518,6 +550,8 @@ export default function AdminBookingsPage() {
                   <option value="COMPLETED">Selesai</option>
 
                   <option value="CANCELLED">Dibatalkan</option>
+
+                  <option value="EXPIRED">Kadaluarsa</option>
                 </select>
               </div>
 
@@ -875,6 +909,25 @@ export default function AdminBookingsPage() {
 
                           <p className="mt-1 text-xs text-red-600">
                             Meja sudah tersedia kembali.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* =========================
+                          EXPIRED
+                      ========================= */}
+
+                    {booking.status === "EXPIRED" && (
+                      <div className="mt-6 border-t border-gray-100 pt-5">
+                        <div className="rounded-xl bg-gray-100 p-4">
+                          <p className="text-sm font-semibold text-gray-700">
+                            Booking telah kadaluarsa.
+                          </p>
+
+                          <p className="mt-1 text-xs text-gray-500">
+                            Booking melewati waktu yang ditentukan dan tidak
+                            lagi dapat dikonfirmasi.
                           </p>
                         </div>
                       </div>
