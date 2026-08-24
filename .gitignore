@@ -40,3 +40,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 /lib/
+
+# AI assistant files
+.agents/
+.claude/
+.windsurf/
