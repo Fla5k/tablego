@@ -8,21 +8,27 @@ datasource db {
 }
 
 model User {
-  id                         Int        @id @default(autoincrement())
-  name                       String
-  email                      String     @unique
-  password                   String
-  phone                      String?
-  role                       UserRole   @default(CUSTOMER)
+  id       Int      @id @default(autoincrement())
+  name     String
+  email    String   @unique
+  password String
+  phone    String?
+  role     UserRole @default(CUSTOMER)
 
-  emailVerified              Boolean    @default(false)
-  emailVerificationToken     String?    @unique
+  emailVerified              Boolean   @default(false)
+  emailVerificationToken     String?   @unique
   emailVerificationExpiresAt DateTime?
 
-  createdAt                  DateTime   @default(now())
-  updatedAt                  DateTime   @updatedAt
-  bookings                   Booking[]
+  // Restaurant/cabang yang dikelola oleh Manager
+  // CUSTOMER dan ADMIN akan bernilai null
+  restaurantId Int?
+  restaurant   Restaurant? @relation("RestaurantManagers", fields: [restaurantId], references: [id])
 
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  bookings  Booking[]
+
+  @@index([restaurantId])
   @@map("users")
 }
 
@@ -37,6 +43,9 @@ model Restaurant {
   updatedAt   DateTime          @updatedAt
   bookings    Booking[]
   tables      RestaurantTable[]
+
+  // Manager yang mengelola restaurant/cabang ini
+  managers User[] @relation("RestaurantManagers")
 
   @@map("restaurants")
 }
@@ -79,6 +88,7 @@ model Booking {
 enum UserRole {
   CUSTOMER
   ADMIN
+  MANAGER
 }
 
 enum BookingStatus {
