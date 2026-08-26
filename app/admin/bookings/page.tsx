@@ -706,7 +706,10 @@ export default function AdminBookingsPage() {
         {!loading && !errorMessage && filteredBookings.length > 0 && (
           <div className="mt-8 space-y-5">
             {filteredBookings.map((booking) => {
-              const status = statusConfig[booking.status];
+              const status = statusConfig[booking.status] ?? {
+                label: booking.status,
+                className: "bg-gray-100 text-gray-600",
+              };
 
               const isProcessing = processingId === booking.id;
 

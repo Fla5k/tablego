@@ -393,7 +393,10 @@ export default function AdminPage() {
                 <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
                   <div className="divide-y divide-gray-100">
                     {recentBookings.map((booking) => {
-                      const status = statusConfig[booking.status];
+                      const status = statusConfig[booking.status] ?? {
+                        label: booking.status,
+                        className: "bg-gray-100 text-gray-600",
+                      };
 
                       return (
                         <div
