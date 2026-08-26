@@ -45,6 +45,23 @@ type Restaurant = {
   };
 };
 
+type Manager = {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: "MANAGER";
+  emailVerified: boolean;
+  restaurantId: number | null;
+  restaurant: {
+    id: number;
+    name: string;
+    address: string;
+  } | null;
+  createdAt: string;
+  updatedAt?: string;
+};
+
 const statusConfig: Record<
   BookingStatus,
   {
@@ -90,14 +107,68 @@ function formatTime(dateString: string) {
   }).format(new Date(dateString));
 }
 
+function formatCreatedDate(dateString: string) {
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(dateString));
+}
+
 export default function AdminPage() {
   const router = useRouter();
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [managers, setManagers] = useState<Manager[]>([]);
 
   const [loading, setLoading] = useState(true);
+  const [loadingManagers, setLoadingManagers] = useState(true);
+  const [creatingManager, setCreatingManager] = useState(false);
+
   const [errorMessage, setErrorMessage] = useState("");
+  const [managerMessage, setManagerMessage] = useState("");
+  const [managerError, setManagerError] = useState("");
+
+  const [showManagerForm, setShowManagerForm] = useState(false);
+
+  const [managerForm, setManagerForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    phone: "",
+    restaurantId: "",
+  });
+
+  async function fetchManagers() {
+    try {
+      setLoadingManagers(true);
+      setManagerError("");
+
+      const response = await fetch("/api/admin/managers", {
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Gagal mengambil data Manager.");
+      }
+
+      setManagers(data.managers || []);
+    } catch (error) {
+      console.error("Fetch managers error:", error);
+
+      setManagerError(
+        error instanceof Error
+          ? error.message
+          : "Gagal mengambil data Manager.",
+      );
+    } finally {
+      setLoadingManagers(false);
+    }
+  }
 
   useEffect(() => {
     async function fetchAdminData() {
@@ -122,17 +193,25 @@ export default function AdminPage() {
           return;
         }
 
-        const [bookingResponse, restaurantResponse] = await Promise.all([
-          fetch("/api/admin/bookings", {
-            credentials: "include",
-          }),
-          fetch("/api/admin/restaurants", {
-            credentials: "include",
-          }),
-        ]);
+        const [bookingResponse, restaurantResponse, managerResponse] =
+          await Promise.all([
+            fetch("/api/admin/bookings", {
+              credentials: "include",
+              cache: "no-store",
+            }),
+            fetch("/api/admin/restaurants", {
+              credentials: "include",
+              cache: "no-store",
+            }),
+            fetch("/api/admin/managers", {
+              credentials: "include",
+              cache: "no-store",
+            }),
+          ]);
 
         const bookingData = await bookingResponse.json();
         const restaurantData = await restaurantResponse.json();
+        const managerData = await managerResponse.json();
 
         if (!bookingResponse.ok || !bookingData.success) {
           throw new Error(
@@ -146,8 +225,15 @@ export default function AdminPage() {
           );
         }
 
-        setBookings(bookingData.bookings);
-        setRestaurants(restaurantData.restaurants);
+        if (!managerResponse.ok || !managerData.success) {
+          throw new Error(
+            managerData.message || "Gagal mengambil data Manager.",
+          );
+        }
+
+        setBookings(bookingData.bookings || []);
+        setRestaurants(restaurantData.restaurants || []);
+        setManagers(managerData.managers || []);
       } catch (error) {
         console.error("Admin dashboard error:", error);
 
@@ -158,6 +244,7 @@ export default function AdminPage() {
         );
       } finally {
         setLoading(false);
+        setLoadingManagers(false);
       }
     }
 
@@ -195,6 +282,80 @@ export default function AdminPage() {
 
   const recentBookings = useMemo(() => bookings.slice(0, 5), [bookings]);
 
+  async function handleCreateManager(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    setCreatingManager(true);
+    setManagerMessage("");
+    setManagerError("");
+
+    try {
+      if (!managerForm.name.trim()) {
+        throw new Error("Nama Manager wajib diisi.");
+      }
+
+      if (!managerForm.email.trim()) {
+        throw new Error("Email Manager wajib diisi.");
+      }
+
+      if (!managerForm.password) {
+        throw new Error("Password Manager wajib diisi.");
+      }
+
+      if (managerForm.password.length < 6) {
+        throw new Error("Password minimal 6 karakter.");
+      }
+
+      if (!managerForm.restaurantId) {
+        throw new Error("Cabang/restoran wajib dipilih.");
+      }
+
+      const response = await fetch("/api/admin/managers", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          name: managerForm.name.trim(),
+          email: managerForm.email.trim(),
+          password: managerForm.password,
+          phone: managerForm.phone.trim(),
+          restaurantId: Number(managerForm.restaurantId),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Gagal membuat akun Manager.");
+      }
+
+      setManagerMessage(data.message || "Akun Manager berhasil dibuat.");
+
+      setManagerForm({
+        name: "",
+        email: "",
+        password: "",
+        phone: "",
+        restaurantId: "",
+      });
+
+      await fetchManagers();
+    } catch (error) {
+      console.error("Create manager error:", error);
+
+      setManagerError(
+        error instanceof Error ? error.message : "Gagal membuat akun Manager.",
+      );
+    } finally {
+      setCreatingManager(false);
+    }
+  }
+
+  const inputClassName =
+    "w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-100 disabled:text-gray-500";
+
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-7xl px-6 py-10">
@@ -208,7 +369,8 @@ export default function AdminPage() {
           </h1>
 
           <p className="mt-2 text-gray-600">
-            Pantau restoran, meja, dan reservasi TableGo dari satu tempat.
+            Pantau restoran, meja, reservasi, dan Manager TableGo dari satu
+            tempat.
           </p>
         </div>
 
@@ -359,6 +521,340 @@ export default function AdminPage() {
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">
+                    Manajemen Manager
+                  </h2>
+
+                  <p className="mt-1 text-sm text-gray-500">
+                    Buat dan pantau akun Manager berdasarkan cabang restoran.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowManagerForm((current) => !current);
+                    setManagerMessage("");
+                    setManagerError("");
+                  }}
+                  className="rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"
+                >
+                  {showManagerForm ? "Tutup Form" : "+ Tambah Manager"}
+                </button>
+              </div>
+
+              {managerMessage && (
+                <div className="mb-5 rounded-xl border border-green-200 bg-green-50 p-4">
+                  <p className="text-sm font-semibold text-green-700">
+                    {managerMessage}
+                  </p>
+                </div>
+              )}
+
+              {managerError && (
+                <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4">
+                  <p className="text-sm font-semibold text-red-700">
+                    {managerError}
+                  </p>
+                </div>
+              )}
+
+              {showManagerForm && (
+                <form
+                  onSubmit={handleCreateManager}
+                  className="mb-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+                >
+                  <div className="mb-6">
+                    <h3 className="text-lg font-bold text-gray-900">
+                      Buat Akun Manager
+                    </h3>
+
+                    <p className="mt-1 text-sm text-gray-500">
+                      Manager hanya akan mengelola booking dari cabang yang
+                      dipilih.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-5 md:grid-cols-2">
+                    <div>
+                      <label
+                        htmlFor="manager-name"
+                        className="mb-2 block text-sm font-semibold text-gray-700"
+                      >
+                        Nama Manager
+                      </label>
+
+                      <input
+                        id="manager-name"
+                        type="text"
+                        value={managerForm.name}
+                        onChange={(event) =>
+                          setManagerForm((current) => ({
+                            ...current,
+                            name: event.target.value,
+                          }))
+                        }
+                        placeholder="Contoh: Budi Santoso"
+                        disabled={creatingManager}
+                        className={inputClassName}
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="manager-email"
+                        className="mb-2 block text-sm font-semibold text-gray-700"
+                      >
+                        Email
+                      </label>
+
+                      <input
+                        id="manager-email"
+                        type="email"
+                        value={managerForm.email}
+                        onChange={(event) =>
+                          setManagerForm((current) => ({
+                            ...current,
+                            email: event.target.value,
+                          }))
+                        }
+                        placeholder="manager@tablego.com"
+                        disabled={creatingManager}
+                        className={inputClassName}
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="manager-password"
+                        className="mb-2 block text-sm font-semibold text-gray-700"
+                      >
+                        Password
+                      </label>
+
+                      <input
+                        id="manager-password"
+                        type="password"
+                        value={managerForm.password}
+                        onChange={(event) =>
+                          setManagerForm((current) => ({
+                            ...current,
+                            password: event.target.value,
+                          }))
+                        }
+                        placeholder="Minimal 6 karakter"
+                        disabled={creatingManager}
+                        className={inputClassName}
+                      />
+
+                      <p className="mt-2 text-xs text-gray-400">
+                        Password akan disimpan dalam bentuk hash.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="manager-phone"
+                        className="mb-2 block text-sm font-semibold text-gray-700"
+                      >
+                        No. Telepon
+                      </label>
+
+                      <input
+                        id="manager-phone"
+                        type="tel"
+                        value={managerForm.phone}
+                        onChange={(event) =>
+                          setManagerForm((current) => ({
+                            ...current,
+                            phone: event.target.value,
+                          }))
+                        }
+                        placeholder="08xxxxxxxxxx"
+                        disabled={creatingManager}
+                        className={inputClassName}
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label
+                        htmlFor="manager-restaurant"
+                        className="mb-2 block text-sm font-semibold text-gray-700"
+                      >
+                        Pilih Cabang / Restoran
+                      </label>
+
+                      <select
+                        id="manager-restaurant"
+                        value={managerForm.restaurantId}
+                        onChange={(event) =>
+                          setManagerForm((current) => ({
+                            ...current,
+                            restaurantId: event.target.value,
+                          }))
+                        }
+                        disabled={creatingManager}
+                        className={`${inputClassName} cursor-pointer`}
+                      >
+                        <option value="" className="bg-white text-gray-900">
+                          -- Pilih cabang yang dikelola --
+                        </option>
+
+                        {restaurants.map((restaurant) => (
+                          <option
+                            key={restaurant.id}
+                            value={restaurant.id}
+                            className="bg-white text-gray-900"
+                          >
+                            {restaurant.name} — {restaurant.address}
+                          </option>
+                        ))}
+                      </select>
+
+                      {restaurants.length === 0 && (
+                        <p className="mt-2 text-xs text-red-500">
+                          Belum ada restoran. Tambahkan restoran terlebih
+                          dahulu.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowManagerForm(false);
+                        setManagerMessage("");
+                        setManagerError("");
+                      }}
+                      disabled={creatingManager}
+                      className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Batal
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={creatingManager || restaurants.length === 0}
+                      className="rounded-xl bg-green-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                    >
+                      {creatingManager
+                        ? "Membuat Akun..."
+                        : "Buat Akun Manager"}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                {loadingManagers ? (
+                  <div className="p-8 text-center">
+                    <p className="text-sm text-gray-500">
+                      Memuat data Manager...
+                    </p>
+                  </div>
+                ) : managers.length === 0 ? (
+                  <div className="p-10 text-center">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-xl">
+                      👤
+                    </div>
+
+                    <h3 className="mt-4 font-semibold text-gray-900">
+                      Belum ada Manager
+                    </h3>
+
+                    <p className="mt-1 text-sm text-gray-500">
+                      Buat akun Manager pertama untuk mengelola booking
+                      berdasarkan cabang.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {managers.map((manager) => (
+                      <div
+                        key={manager.id}
+                        className="p-5 transition hover:bg-gray-50"
+                      >
+                        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                          <div className="flex items-start gap-4">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-900 text-lg text-white">
+                              👤
+                            </div>
+
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="font-bold text-gray-900">
+                                  {manager.name}
+                                </h3>
+
+                                <span className="rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
+                                  MANAGER
+                                </span>
+                              </div>
+
+                              <p className="mt-1 text-sm text-gray-500">
+                                {manager.email}
+                              </p>
+
+                              {manager.phone && (
+                                <p className="mt-1 text-sm text-gray-500">
+                                  {manager.phone}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="grid gap-4 sm:grid-cols-2 lg:min-w-[480px]">
+                            <div className="rounded-xl bg-gray-50 p-4">
+                              <p className="text-xs font-medium text-gray-400">
+                                Cabang yang Dikelola
+                              </p>
+
+                              <p className="mt-1 font-semibold text-gray-900">
+                                {manager.restaurant?.name || "Belum ditentukan"}
+                              </p>
+
+                              {manager.restaurant?.address && (
+                                <p className="mt-1 text-xs text-gray-500">
+                                  {manager.restaurant.address}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="rounded-xl bg-gray-50 p-4">
+                              <p className="text-xs font-medium text-gray-400">
+                                Status Email
+                              </p>
+
+                              <p
+                                className={`mt-1 font-semibold ${
+                                  manager.emailVerified
+                                    ? "text-green-600"
+                                    : "text-yellow-600"
+                                }`}
+                              >
+                                {manager.emailVerified
+                                  ? "Terverifikasi"
+                                  : "Belum Terverifikasi"}
+                              </p>
+
+                              <p className="mt-1 text-xs text-gray-500">
+                                Dibuat {formatCreatedDate(manager.createdAt)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section className="mt-8">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">
                     Booking Terbaru
                   </h2>
 
@@ -470,7 +966,7 @@ export default function AdminPage() {
                 </p>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-3">
                 <Link
                   href="/admin/restaurants"
                   className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-green-200 hover:shadow-md"
@@ -514,6 +1010,36 @@ export default function AdminPage() {
                     </div>
                   </div>
                 </Link>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowManagerForm(true);
+
+                    window.scrollTo({
+                      top: document.body.scrollHeight,
+                      behavior: "smooth",
+                    });
+                  }}
+                  className="group rounded-2xl border border-gray-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-green-200 hover:shadow-md"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-900 text-xl text-white">
+                      👤
+                    </div>
+
+                    <div>
+                      <h3 className="font-bold text-gray-900 group-hover:text-green-600">
+                        Kelola Manager
+                      </h3>
+
+                      <p className="mt-1 text-sm leading-6 text-gray-500">
+                        Buat akun Manager dan tentukan cabang yang mereka
+                        kelola.
+                      </p>
+                    </div>
+                  </div>
+                </button>
               </div>
             </section>
           </>

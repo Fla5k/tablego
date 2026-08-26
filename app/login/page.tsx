@@ -59,8 +59,17 @@ export default function LoginPage() {
         throw new Error(message);
       }
 
+      /*
+       * Redirect berdasarkan role.
+       *
+       * ADMIN   → Dashboard Admin
+       * MANAGER → Dashboard Manager
+       * CUSTOMER → Halaman restoran untuk booking
+       */
       if (data.user?.role === "ADMIN") {
         router.push("/admin");
+      } else if (data.user?.role === "MANAGER") {
+        router.push("/manager");
       } else {
         router.push("/restaurants");
       }
@@ -158,7 +167,7 @@ export default function LoginPage() {
             </h1>
 
             <p className="mt-3 text-sm leading-6 text-gray-500">
-              Masuk untuk melanjutkan booking meja di restoran favoritmu.
+              Masuk untuk melanjutkan ke dashboard TableGo.
             </p>
           </div>
 

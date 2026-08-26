@@ -1,7 +1,41 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { getCurrentAdmin } from "@/lib/auth";
+import { sendVerificationEmail } from "@/lib/email";
+
+function validatePassword(password: string) {
+  if (password.length < 12) {
+    return "Password minimal 12 karakter.";
+  }
+
+  if (password.length > 128) {
+    return "Password maksimal 128 karakter.";
+  }
+
+  if (!/[a-z]/.test(password)) {
+    return "Password harus memiliki minimal 1 huruf kecil.";
+  }
+
+  if (!/[A-Z]/.test(password)) {
+    return "Password harus memiliki minimal 1 huruf besar.";
+  }
+
+  if (!/[0-9]/.test(password)) {
+    return "Password harus memiliki minimal 1 angka.";
+  }
+
+  if (!/[^A-Za-z0-9]/.test(password)) {
+    return "Password harus memiliki minimal 1 karakter khusus.";
+  }
+
+  return null;
+}
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
 
 export async function GET() {
   try {
@@ -119,11 +153,23 @@ export async function POST(request: Request) {
       );
     }
 
-    if (password.length < 6) {
+    if (!isValidEmail(normalizedEmail)) {
       return NextResponse.json(
         {
           success: false,
-          message: "Password minimal 6 karakter.",
+          message: "Format email tidak valid.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const passwordError = validatePassword(password);
+
+    if (passwordError) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: passwordError,
         },
         { status: 400 },
       );
@@ -169,7 +215,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+
+    const verificationExpiresAt = new Date(
+      Date.now() + 24 * 60 * 60 * 1000,
+    );
 
     const manager = await prisma.user.create({
       data: {
@@ -179,6 +231,9 @@ export async function POST(request: Request) {
         phone: cleanPhone,
         role: "MANAGER",
         restaurantId: parsedRestaurantId,
+        emailVerified: false,
+        emailVerificationToken: verificationToken,
+        emailVerificationExpiresAt: verificationExpiresAt,
       },
       select: {
         id: true,
@@ -199,10 +254,36 @@ export async function POST(request: Request) {
       },
     });
 
+    try {
+      await sendVerificationEmail(
+        manager.email,
+        manager.name,
+        verificationToken,
+      );
+    } catch (emailError) {
+      console.error("Manager verification email error:", emailError);
+
+      await prisma.user.delete({
+        where: {
+          id: manager.id,
+        },
+      });
+
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Akun Manager tidak dapat dibuat karena email verifikasi gagal dikirim.",
+        },
+        { status: 500 },
+      );
+    }
+
     return NextResponse.json(
       {
         success: true,
-        message: "Akun Manager berhasil dibuat.",
+        message:
+          "Akun Manager berhasil dibuat. Email verifikasi telah dikirim ke alamat email Manager.",
         manager,
       },
       { status: 201 },
