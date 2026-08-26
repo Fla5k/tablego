@@ -4,7 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-type BookingStatus = "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
+type BookingStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "EXPIRED";
 
 type Booking = {
   id: number;
@@ -62,6 +67,10 @@ const statusConfig: Record<
   CANCELLED: {
     label: "Dibatalkan",
     className: "bg-red-50 text-red-700",
+  },
+  EXPIRED: {
+    label: "Kedaluwarsa",
+    className: "bg-gray-50 text-gray-700",
   },
 };
 
