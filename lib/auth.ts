@@ -50,6 +50,14 @@ export async function getCurrentUser() {
       email: true,
       phone: true,
       role: true,
+      restaurantId: true,
+      restaurant: {
+        select: {
+          id: true,
+          name: true,
+          address: true,
+        },
+      },
     },
   });
 
@@ -60,6 +68,21 @@ export async function getCurrentAdmin() {
   const user = await getCurrentUser();
 
   if (!user || user.role !== "ADMIN") {
+    return null;
+  }
+
+  return user;
+}
+
+export async function getCurrentManager() {
+  const user = await getCurrentUser();
+
+  if (
+    !user ||
+    user.role !== "MANAGER" ||
+    !user.restaurantId ||
+    !user.restaurant
+  ) {
     return null;
   }
 
