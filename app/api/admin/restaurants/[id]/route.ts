@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+
 import { getCurrentAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -37,6 +38,21 @@ export async function GET(
         id: restaurantId,
       },
       include: {
+        parent: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        branches: {
+          select: {
+            id: true,
+            name: true,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
         tables: {
           orderBy: {
             tableNumber: "asc",
@@ -45,6 +61,7 @@ export async function GET(
         _count: {
           select: {
             bookings: true,
+            branches: true,
           },
         },
       },
@@ -114,6 +131,10 @@ export async function PATCH(
       where: {
         id: restaurantId,
       },
+      select: {
+        id: true,
+        parentId: true,
+      },
     });
 
     if (!existingRestaurant) {
@@ -134,26 +155,96 @@ export async function PATCH(
       address,
       phone,
       image,
+      parentId,
     } = body;
 
-    if (name !== undefined && !name?.trim()) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Nama restoran tidak boleh kosong.",
-        },
-        { status: 400 },
-      );
+    if (name !== undefined) {
+      if (typeof name !== "string" || !name.trim()) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Nama restoran tidak boleh kosong.",
+          },
+          { status: 400 },
+        );
+      }
     }
 
-    if (address !== undefined && !address?.trim()) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Alamat restoran tidak boleh kosong.",
-        },
-        { status: 400 },
-      );
+    if (address !== undefined) {
+      if (typeof address !== "string" || !address.trim()) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Alamat restoran tidak boleh kosong.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    let parsedParentId: number | null | undefined = undefined;
+
+    if (parentId !== undefined) {
+      if (parentId === null || parentId === "") {
+        parsedParentId = null;
+      } else {
+        parsedParentId = Number(parentId);
+
+        if (
+          !Number.isInteger(parsedParentId) ||
+          parsedParentId <= 0
+        ) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: "Restoran induk tidak valid.",
+            },
+            { status: 400 },
+          );
+        }
+
+        if (parsedParentId === restaurantId) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "Restoran tidak dapat menjadi induknya sendiri.",
+            },
+            { status: 400 },
+          );
+        }
+
+        const parentRestaurant = await prisma.restaurant.findUnique({
+          where: {
+            id: parsedParentId,
+          },
+          select: {
+            id: true,
+            parentId: true,
+          },
+        });
+
+        if (!parentRestaurant) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: "Restoran induk tidak ditemukan.",
+            },
+            { status: 404 },
+          );
+        }
+
+        if (parentRestaurant.parentId !== null) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "Restoran induk yang dipilih sudah merupakan cabang. Pilih restoran utama.",
+            },
+            { status: 400 },
+          );
+        }
+      }
     }
 
     const restaurant = await prisma.restaurant.update({
@@ -164,18 +255,59 @@ export async function PATCH(
         ...(name !== undefined && {
           name: name.trim(),
         }),
+
         ...(description !== undefined && {
-          description: description?.trim() || null,
+          description:
+            typeof description === "string" && description.trim()
+              ? description.trim()
+              : null,
         }),
+
         ...(address !== undefined && {
           address: address.trim(),
         }),
+
         ...(phone !== undefined && {
-          phone: phone?.trim() || null,
+          phone:
+            typeof phone === "string" && phone.trim()
+              ? phone.trim()
+              : null,
         }),
+
         ...(image !== undefined && {
-          image: image?.trim() || null,
+          image:
+            typeof image === "string" && image.trim()
+              ? image.trim()
+              : null,
         }),
+
+        ...(parentId !== undefined && {
+          parentId: parsedParentId,
+        }),
+      },
+      include: {
+        parent: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        branches: {
+          select: {
+            id: true,
+            name: true,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
+        _count: {
+          select: {
+            tables: true,
+            bookings: true,
+            branches: true,
+          },
+        },
       },
     });
 
@@ -239,6 +371,7 @@ export async function DELETE(
           select: {
             bookings: true,
             tables: true,
+            branches: true,
           },
         },
       },
@@ -271,6 +404,17 @@ export async function DELETE(
           success: false,
           message:
             "Restoran tidak dapat dihapus karena masih memiliki meja.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (restaurant._count.branches > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Restoran utama tidak dapat dihapus karena masih memiliki cabang. Hapus atau ubah cabangnya terlebih dahulu.",
         },
         { status: 400 },
       );

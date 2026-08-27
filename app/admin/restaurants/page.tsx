@@ -12,9 +12,19 @@ type Restaurant = {
   image: string | null;
   createdAt: string;
   updatedAt: string;
+  parentId: number | null;
+  parent: {
+    id: number;
+    name: string;
+  } | null;
+  branches: {
+    id: number;
+    name: string;
+  }[];
   _count: {
     tables: number;
     bookings: number;
+    branches: number;
   };
 };
 
@@ -24,6 +34,7 @@ type RestaurantForm = {
   address: string;
   phone: string;
   image: string;
+  parentId: string;
 };
 
 type RestaurantTable = {
@@ -44,6 +55,7 @@ const emptyForm: RestaurantForm = {
   address: "",
   phone: "",
   image: "",
+  parentId: "",
 };
 
 const emptyTableForm: TableForm = {
@@ -90,43 +102,43 @@ export default function AdminRestaurantsPage() {
   // FETCH RESTAURANTS
   // =========================
 
-  useEffect(() => {
-    async function fetchRestaurants() {
-      try {
-        setLoading(true);
-        setErrorMessage("");
+  const fetchRestaurants = async () => {
+    try {
+      setLoading(true);
+      setErrorMessage("");
 
-        const response = await fetch("/api/admin/restaurants", {
-          credentials: "include",
-        });
+      const response = await fetch("/api/admin/restaurants", {
+        credentials: "include",
+      });
 
-        const data = await response.json();
+      const data = await response.json();
 
-        if (response.status === 403) {
-          router.push("/restaurants");
-          return;
-        }
-
-        if (!response.ok || !data.success) {
-          throw new Error(data.message || "Gagal mengambil data restoran.");
-        }
-
-        setRestaurants(data.restaurants);
-      } catch (error) {
-        console.error("Fetch admin restaurants error:", error);
-
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Terjadi kesalahan saat mengambil data restoran.",
-        );
-      } finally {
-        setLoading(false);
+      if (response.status === 403) {
+        router.push("/restaurants");
+        return;
       }
-    }
 
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Gagal mengambil data restoran.");
+      }
+
+      setRestaurants(data.restaurants);
+    } catch (error) {
+      console.error("Fetch admin restaurants error:", error);
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Terjadi kesalahan saat mengambil data restoran.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchRestaurants();
-  }, [router]);
+  }, []);
 
   // =========================
   // RESTAURANT FORM
@@ -135,8 +147,10 @@ export default function AdminRestaurantsPage() {
   const openCreateForm = () => {
     setEditingId(null);
     setForm(emptyForm);
+
     setErrorMessage("");
     setSuccessMessage("");
+
     setShowForm(true);
   };
 
@@ -165,6 +179,7 @@ export default function AdminRestaurantsPage() {
         address: restaurant.address,
         phone: restaurant.phone || "",
         image: restaurant.image || "",
+        parentId: restaurant.parentId ? String(restaurant.parentId) : "",
       });
 
       setShowForm(true);
@@ -178,6 +193,16 @@ export default function AdminRestaurantsPage() {
       );
     }
   };
+
+  const closeRestaurantForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setForm(emptyForm);
+  };
+
+  // =========================
+  // SAVE RESTAURANT
+  // =========================
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -199,7 +224,14 @@ export default function AdminRestaurantsPage() {
             "Content-Type": "application/json",
           },
           credentials: "include",
-          body: JSON.stringify(form),
+          body: JSON.stringify({
+            name: form.name,
+            description: form.description,
+            address: form.address,
+            phone: form.phone,
+            image: form.image,
+            parentId: form.parentId || null,
+          }),
         },
       );
 
@@ -221,25 +253,17 @@ export default function AdminRestaurantsPage() {
           ),
         );
 
-        setSuccessMessage("Restoran berhasil diperbarui.");
+        setSuccessMessage(data.message || "Restoran berhasil diperbarui.");
       } else {
         setRestaurants((currentRestaurants) => [
-          {
-            ...data.restaurant,
-            _count: {
-              tables: 0,
-              bookings: 0,
-            },
-          },
+          data.restaurant,
           ...currentRestaurants,
         ]);
 
-        setSuccessMessage("Restoran berhasil ditambahkan.");
+        setSuccessMessage(data.message || "Restoran berhasil ditambahkan.");
       }
 
-      setForm(emptyForm);
-      setEditingId(null);
-      setShowForm(false);
+      closeRestaurantForm();
     } catch (error) {
       console.error("Save restaurant error:", error);
 
@@ -289,7 +313,7 @@ export default function AdminRestaurantsPage() {
         setTables([]);
       }
 
-      setSuccessMessage("Restoran berhasil dihapus.");
+      setSuccessMessage(data.message || "Restoran berhasil dihapus.");
     } catch (error) {
       console.error("Delete restaurant error:", error);
 
@@ -302,13 +326,14 @@ export default function AdminRestaurantsPage() {
   };
 
   // =========================
-  // OPEN TABLE MANAGEMENT
+  // TABLE MANAGEMENT
   // =========================
 
   const openTableManagement = async (restaurantId: number) => {
     try {
       setSelectedRestaurantId(restaurantId);
       setTablesLoading(true);
+
       setErrorMessage("");
       setSuccessMessage("");
 
@@ -344,6 +369,7 @@ export default function AdminRestaurantsPage() {
   const closeTableManagement = () => {
     setSelectedRestaurantId(null);
     setTables([]);
+
     setShowTableForm(false);
     setEditingTableId(null);
     setTableForm(emptyTableForm);
@@ -363,6 +389,7 @@ export default function AdminRestaurantsPage() {
 
     setErrorMessage("");
     setSuccessMessage("");
+
     setShowTableForm(true);
   };
 
@@ -376,6 +403,7 @@ export default function AdminRestaurantsPage() {
 
     setErrorMessage("");
     setSuccessMessage("");
+
     setShowTableForm(true);
   };
 
@@ -442,7 +470,7 @@ export default function AdminRestaurantsPage() {
           ),
         );
 
-        setSuccessMessage("Meja berhasil diperbarui.");
+        setSuccessMessage(data.message || "Meja berhasil diperbarui.");
       } else {
         setTables((currentTables) =>
           [...currentTables, data.table].sort((a, b) =>
@@ -466,7 +494,7 @@ export default function AdminRestaurantsPage() {
           ),
         );
 
-        setSuccessMessage("Meja berhasil ditambahkan.");
+        setSuccessMessage(data.message || "Meja berhasil ditambahkan.");
       }
 
       setTableForm(emptyTableForm);
@@ -502,6 +530,7 @@ export default function AdminRestaurantsPage() {
 
     try {
       setDeletingTableId(table.id);
+
       setErrorMessage("");
       setSuccessMessage("");
 
@@ -537,7 +566,7 @@ export default function AdminRestaurantsPage() {
         ),
       );
 
-      setSuccessMessage("Meja berhasil dihapus.");
+      setSuccessMessage(data.message || "Meja berhasil dihapus.");
     } catch (error) {
       console.error("Delete table error:", error);
 
@@ -549,16 +578,22 @@ export default function AdminRestaurantsPage() {
     }
   };
 
+  // =========================
+  // SELECTED RESTAURANT
+  // =========================
+
   const selectedRestaurant = restaurants.find(
     (restaurant) => restaurant.id === selectedRestaurantId,
   );
 
+  // =========================
+  // MAIN UI
+  // =========================
+
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-7xl px-6 py-10">
-        {/* =========================
-            TITLE
-        ========================= */}
+        {/* TITLE */}
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -571,8 +606,8 @@ export default function AdminRestaurantsPage() {
             </h1>
 
             <p className="mt-2 text-gray-600">
-              Tambahkan, ubah, dan kelola restoran serta meja yang tersedia di
-              TableGo.
+              Tambahkan, ubah, dan kelola restoran, cabang, serta meja yang
+              tersedia di TableGo.
             </p>
           </div>
 
@@ -585,9 +620,7 @@ export default function AdminRestaurantsPage() {
           </button>
         </div>
 
-        {/* =========================
-            MESSAGE
-        ========================= */}
+        {/* MESSAGE */}
 
         {successMessage && (
           <div className="mt-6 rounded-xl border border-green-100 bg-green-50 p-4 text-sm font-medium text-green-700">
@@ -601,30 +634,31 @@ export default function AdminRestaurantsPage() {
           </div>
         )}
 
-        {/* =========================
-            RESTAURANT FORM
-        ========================= */}
+        {/* RESTAURANT FORM */}
 
         {showForm && (
           <section className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 text-gray-900 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">
+                <p className="text-xs font-semibold uppercase tracking-wider text-green-600">
                   {editingId ? "Edit Restoran" : "Tambah Restoran"}
+                </p>
+
+                <h2 className="mt-1 text-xl font-bold text-gray-900">
+                  {editingId
+                    ? "Perbarui Informasi Restoran"
+                    : "Tambah Restoran Baru"}
                 </h2>
 
                 <p className="mt-1 text-sm text-gray-500">
-                  Isi informasi restoran di bawah ini.
+                  Isi informasi restoran dan tentukan apakah restoran ini
+                  merupakan cabang.
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  setEditingId(null);
-                  setForm(emptyForm);
-                }}
+                onClick={closeRestaurantForm}
                 className="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100"
               >
                 Tutup
@@ -759,6 +793,107 @@ export default function AdminRestaurantsPage() {
                 />
               </div>
 
+              {/* CABANG */}
+
+              <div className="md:col-span-2">
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-100 text-green-700">
+                      🏢
+                    </div>
+
+                    <div>
+                      <h3 className="font-bold text-gray-900">
+                        Cabang Restoran
+                      </h3>
+
+                      <p className="mt-1 text-sm text-gray-600">
+                        Jika restoran ini adalah cabang, pilih restoran utama
+                        sebagai induknya.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5">
+                    <label
+                      htmlFor="parentId"
+                      className="text-sm font-medium text-gray-800"
+                    >
+                      Restoran Induk
+                    </label>
+
+                    <select
+                      id="parentId"
+                      value={form.parentId}
+                      onChange={(event) =>
+                        setForm({
+                          ...form,
+                          parentId: event.target.value,
+                        })
+                      }
+                      className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                    >
+                      <option value="">— Restoran Utama —</option>
+
+                      {restaurants
+                        .filter(
+                          (restaurant) =>
+                            restaurant.parentId === null &&
+                            restaurant.id !== editingId,
+                        )
+                        .map((restaurant) => (
+                          <option key={restaurant.id} value={restaurant.id}>
+                            {restaurant.name}
+                          </option>
+                        ))}
+                    </select>
+
+                    <p className="mt-2 text-xs text-gray-500">
+                      Pilih <strong>Restoran Utama</strong> jika restoran ini
+                      merupakan cabang.
+                    </p>
+                  </div>
+
+                  {form.parentId && (
+                    <div className="mt-4 rounded-xl border border-green-100 bg-green-50 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-green-700">
+                        Status
+                      </p>
+
+                      <p className="mt-1 text-sm font-semibold text-green-800">
+                        Restoran ini akan menjadi cabang.
+                      </p>
+
+                      <p className="mt-1 text-xs text-green-700">
+                        Induk:{" "}
+                        {
+                          restaurants.find(
+                            (restaurant) =>
+                              restaurant.id === Number(form.parentId),
+                          )?.name
+                        }
+                      </p>
+                    </div>
+                  )}
+
+                  {!form.parentId && (
+                    <div className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Status
+                      </p>
+
+                      <p className="mt-1 text-sm font-semibold text-gray-800">
+                        Restoran Utama
+                      </p>
+
+                      <p className="mt-1 text-xs text-gray-500">
+                        Restoran ini tidak memiliki induk.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* BUTTON */}
 
               <div className="flex gap-3 md:col-span-2">
@@ -776,11 +911,7 @@ export default function AdminRestaurantsPage() {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowForm(false);
-                    setEditingId(null);
-                    setForm(emptyForm);
-                  }}
+                  onClick={closeRestaurantForm}
                   className="rounded-xl border border-gray-200 px-6 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
                 >
                   Batal
@@ -790,9 +921,7 @@ export default function AdminRestaurantsPage() {
           </section>
         )}
 
-        {/* =========================
-            RESTAURANT LIST
-        ========================= */}
+        {/* RESTAURANT LIST */}
 
         {loading ? (
           <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
@@ -804,101 +933,170 @@ export default function AdminRestaurantsPage() {
           </div>
         ) : (
           <section className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {restaurants.map((restaurant) => (
-              <article
-                key={restaurant.id}
-                className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
-              >
-                {restaurant.image ? (
-                  <img
-                    src={restaurant.image}
-                    alt={restaurant.name}
-                    className="h-48 w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-48 items-center justify-center bg-gray-100 text-sm text-gray-500">
-                    Tidak ada gambar
-                  </div>
-                )}
+            {restaurants.map((restaurant) => {
+              const isBranch = restaurant.parentId !== null;
 
-                <div className="p-5">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                    Restoran #{restaurant.id}
-                  </p>
+              return (
+                <article
+                  key={restaurant.id}
+                  className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+                >
+                  {/* IMAGE */}
 
-                  <h2 className="mt-1 text-xl font-bold text-gray-900">
-                    {restaurant.name}
-                  </h2>
-
-                  <p className="mt-2 text-sm text-gray-600">
-                    {restaurant.address}
-                  </p>
-
-                  {restaurant.description && (
-                    <p className="mt-3 line-clamp-2 text-sm text-gray-600">
-                      {restaurant.description}
-                    </p>
+                  {restaurant.image ? (
+                    <img
+                      src={restaurant.image}
+                      alt={restaurant.name}
+                      className="h-48 w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-48 items-center justify-center bg-gray-100 text-sm text-gray-500">
+                      Tidak ada gambar
+                    </div>
                   )}
 
-                  {/* STATS */}
+                  <div className="p-5">
+                    {/* STATUS */}
 
-                  <div className="mt-5 grid grid-cols-2 gap-3">
-                    <div className="rounded-xl bg-gray-50 p-3">
-                      <p className="text-xs text-gray-500">Meja</p>
-
-                      <p className="mt-1 font-bold text-gray-900">
-                        {restaurant._count.tables}
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Restoran #{restaurant.id}
                       </p>
+
+                      {isBranch ? (
+                        <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
+                          Cabang
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                          Utama
+                        </span>
+                      )}
                     </div>
 
-                    <div className="rounded-xl bg-gray-50 p-3">
-                      <p className="text-xs text-gray-500">Booking</p>
+                    {/* NAME */}
 
-                      <p className="mt-1 font-bold text-gray-900">
-                        {restaurant._count.bookings}
+                    <h2 className="mt-2 text-xl font-bold text-gray-900">
+                      {restaurant.name}
+                    </h2>
+
+                    {/* PARENT */}
+
+                    {restaurant.parent && (
+                      <div className="mt-3 rounded-xl border border-green-100 bg-green-50 p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-green-600">
+                          Restoran Induk
+                        </p>
+
+                        <p className="mt-1 text-sm font-semibold text-green-800">
+                          {restaurant.parent.name}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* ADDRESS */}
+
+                    <p className="mt-3 text-sm text-gray-600">
+                      {restaurant.address}
+                    </p>
+
+                    {/* DESCRIPTION */}
+
+                    {restaurant.description && (
+                      <p className="mt-3 line-clamp-2 text-sm text-gray-600">
+                        {restaurant.description}
                       </p>
+                    )}
+
+                    {/* BRANCHES */}
+
+                    {!isBranch && restaurant.branches.length > 0 && (
+                      <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                          Cabang
+                        </p>
+
+                        <div className="mt-2 space-y-1">
+                          {restaurant.branches.map((branch) => (
+                            <p
+                              key={branch.id}
+                              className="text-sm font-medium text-gray-800"
+                            >
+                              • {branch.name}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* STATS */}
+
+                    <div className="mt-5 grid grid-cols-3 gap-3">
+                      <div className="rounded-xl bg-gray-50 p-3">
+                        <p className="text-xs text-gray-500">Meja</p>
+
+                        <p className="mt-1 font-bold text-gray-900">
+                          {restaurant._count.tables}
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl bg-gray-50 p-3">
+                        <p className="text-xs text-gray-500">Booking</p>
+
+                        <p className="mt-1 font-bold text-gray-900">
+                          {restaurant._count.bookings}
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl bg-gray-50 p-3">
+                        <p className="text-xs text-gray-500">Cabang</p>
+
+                        <p className="mt-1 font-bold text-gray-900">
+                          {restaurant._count.branches}
+                        </p>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* ACTIONS */}
+                    {/* ACTIONS */}
 
-                  <div className="mt-5 grid grid-cols-2 gap-3">
+                    <div className="mt-5 grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => openEditForm(restaurant.id)}
+                        className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(restaurant)}
+                        disabled={deletingId === restaurant.id}
+                        className="rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {deletingId === restaurant.id
+                          ? "Menghapus..."
+                          : "Hapus"}
+                      </button>
+                    </div>
+
+                    {/* MANAGE TABLE */}
+
                     <button
                       type="button"
-                      onClick={() => openEditForm(restaurant.id)}
-                      className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                      onClick={() => openTableManagement(restaurant.id)}
+                      className="mt-3 w-full rounded-xl bg-gray-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
                     >
-                      Edit
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(restaurant)}
-                      disabled={deletingId === restaurant.id}
-                      className="rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {deletingId === restaurant.id ? "Menghapus..." : "Hapus"}
+                      Kelola Meja
                     </button>
                   </div>
-
-                  {/* MANAGE TABLE */}
-
-                  <button
-                    type="button"
-                    onClick={() => openTableManagement(restaurant.id)}
-                    className="mt-3 w-full rounded-xl bg-gray-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
-                  >
-                    Kelola Meja
-                  </button>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </section>
         )}
 
-        {/* =========================
-            TABLE MANAGEMENT PANEL
-        ========================= */}
+        {/* TABLE MANAGEMENT PANEL */}
 
         {selectedRestaurantId && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -914,6 +1112,15 @@ export default function AdminRestaurantsPage() {
                   <h2 className="mt-1 text-xl font-bold text-gray-900">
                     {selectedRestaurant?.name || "Restoran"}
                   </h2>
+
+                  {selectedRestaurant?.parent && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      Cabang dari{" "}
+                      <span className="font-semibold">
+                        {selectedRestaurant.parent.name}
+                      </span>
+                    </p>
+                  )}
                 </div>
 
                 <button

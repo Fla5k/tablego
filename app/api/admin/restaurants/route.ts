@@ -134,6 +134,7 @@ export async function POST(request: Request) {
         },
         select: {
           id: true,
+          name: true,
           parentId: true,
         },
       });
@@ -164,21 +165,27 @@ export async function POST(request: Request) {
     const restaurant = await prisma.restaurant.create({
       data: {
         name: name.trim(),
+
         description:
           typeof description === "string" && description.trim()
             ? description.trim()
             : null,
+
         address: address.trim(),
+
         phone:
           typeof phone === "string" && phone.trim()
             ? phone.trim()
             : null,
+
         image:
           typeof image === "string" && image.trim()
             ? image.trim()
             : null,
+
         parentId: parsedParentId,
       },
+
       include: {
         parent: {
           select: {
@@ -186,12 +193,17 @@ export async function POST(request: Request) {
             name: true,
           },
         },
+
         branches: {
           select: {
             id: true,
             name: true,
           },
+          orderBy: {
+            createdAt: "asc",
+          },
         },
+
         _count: {
           select: {
             tables: true,
@@ -205,9 +217,11 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: true,
+
         message: parsedParentId
           ? "Cabang restoran berhasil ditambahkan."
           : "Restoran utama berhasil ditambahkan.",
+
         restaurant,
       },
       { status: 201 },
