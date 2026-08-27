@@ -300,3 +300,78 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const admin = await getCurrentAdmin();
+
+    if (!admin) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Akses hanya untuk ADMIN.",
+        },
+        { status: 403 },
+      );
+    }
+
+    const body = await request.json();
+    const managerId = Number(body?.managerId);
+
+    if (!Number.isInteger(managerId) || managerId <= 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "ID Manager tidak valid.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const manager = await prisma.user.findFirst({
+      where: {
+        id: managerId,
+        role: "MANAGER",
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    if (!manager) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Manager tidak ditemukan.",
+        },
+        { status: 404 },
+      );
+    }
+
+    await prisma.user.delete({
+      where: {
+        id: manager.id,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: `Manager ${manager.name} berhasil dihapus.`,
+      },
+      { status: 200 },
+    );
+  } catch (error) {
+    console.error("Admin managers DELETE error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          "Manager tidak dapat dihapus. Pastikan Manager tidak memiliki data yang masih terhubung.",
+      },
+      { status: 500 },
+    );
+  }
+}
