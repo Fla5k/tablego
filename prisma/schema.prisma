@@ -33,20 +33,23 @@ model User {
 }
 
 model Restaurant {
-  id          Int               @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   name        String
   description String?
   address     String
   phone       String?
   image       String?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  bookings    Booking[]
-  tables      RestaurantTable[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  parentId    Int?
 
-  // Manager yang mengelola restaurant/cabang ini
-  managers User[] @relation("RestaurantManagers")
+  bookings Booking[]
+  tables   RestaurantTable[]
+  parent   Restaurant?       @relation("RestaurantBranches", fields: [parentId], references: [id])
+  branches Restaurant[]      @relation("RestaurantBranches")
+  managers User[]            @relation("RestaurantManagers")
 
+  @@index([parentId])
   @@map("restaurants")
 }
 
