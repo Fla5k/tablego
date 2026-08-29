@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentManager } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const manager = await getCurrentManager();
 
@@ -28,12 +28,40 @@ export async function GET() {
       );
     }
 
+    const searchParams = request.nextUrl.searchParams;
+    const date = searchParams.get("date");
+
+    const where: {
+      restaurantId: number;
+      bookingDate?: {
+        gte: Date;
+        lt: Date;
+      };
+    } = {
+      restaurantId,
+    };
+
+    if (date) {
+      const startOfDay = new Date(`${date}T00:00:00`);
+      const endOfDay = new Date(`${date}T00:00:00`);
+
+      endOfDay.setDate(endOfDay.getDate() + 1);
+
+      if (
+        !Number.isNaN(startOfDay.getTime()) &&
+        !Number.isNaN(endOfDay.getTime())
+      ) {
+        where.bookingDate = {
+          gte: startOfDay,
+          lt: endOfDay,
+        };
+      }
+    }
+
     const bookings = await prisma.booking.findMany({
-      where: {
-        restaurantId,
-      },
+      where,
       orderBy: {
-        bookingDate: "desc",
+        bookingDate: "asc",
       },
       include: {
         user: {

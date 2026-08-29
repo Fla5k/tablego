@@ -10,12 +10,14 @@ type Booking = {
   guestCount: number;
   status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED" | "EXPIRED";
   notes: string | null;
+
   restaurant: {
     id: number;
     name: string;
     address: string;
     image: string | null;
   };
+
   table: {
     id: number;
     tableNumber: string;
@@ -23,88 +25,155 @@ type Booking = {
   };
 };
 
+type ApiResponse = {
+  success: boolean;
+  message?: string;
+  bookings?: Booking[];
+};
+
 const statusConfig = {
   PENDING: {
     label: "Menunggu Konfirmasi",
     className: "bg-yellow-50 text-yellow-700",
   },
+
   CONFIRMED: {
     label: "Dikonfirmasi",
     className: "bg-green-50 text-green-700",
   },
+
   COMPLETED: {
     label: "Selesai",
     className: "bg-blue-50 text-blue-700",
   },
+
   CANCELLED: {
     label: "Dibatalkan",
     className: "bg-red-50 text-red-700",
   },
+
   EXPIRED: {
     label: "Kedaluwarsa",
     className: "bg-gray-100 text-gray-600",
   },
 };
 
-function formatDate(dateString: string) {
+function getTodayDate() {
+  const now = new Date();
+
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatSelectedDate(dateString: string) {
+  if (!dateString) {
+    return "-";
+  }
+
+  const [year, month, day] = dateString.split("-").map(Number);
+
+  if (!year || !month || !day) {
+    return "-";
+  }
+
   return new Intl.DateTimeFormat("id-ID", {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
-  }).format(new Date(dateString));
+  }).format(new Date(year, month - 1, day));
+}
+
+function formatDate(dateString: string) {
+  const date = new Date(dateString);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
 }
 
 function formatTime(dateString: string) {
+  const date = new Date(dateString);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
   return new Intl.DateTimeFormat("id-ID", {
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(dateString));
+  }).format(date);
 }
 
 export default function BookingsPage() {
   const router = useRouter();
 
   const [bookings, setBookings] = useState<Booking[]>([]);
+
+  const [selectedDate, setSelectedDate] = useState(getTodayDate());
+
   const [loading, setLoading] = useState(true);
+
   const [errorMessage, setErrorMessage] = useState("");
+
   const [cancellingId, setCancellingId] = useState<number | null>(null);
 
-  useEffect(() => {
-    async function fetchBookings() {
-      try {
-        const response = await fetch("/api/bookings/me", {
+  async function fetchBookings(date: string) {
+    try {
+      setLoading(true);
+      setErrorMessage("");
+
+      const response = await fetch(
+        `/api/bookings/me?date=${encodeURIComponent(date)}`,
+        {
           method: "GET",
           credentials: "include",
-        });
+          cache: "no-store",
+        },
+      );
 
-        const data = await response.json();
+      const data: ApiResponse = await response.json();
 
-        if (response.status === 401) {
-          router.push("/login");
-          return;
-        }
-
-        if (!response.ok || !data.success) {
-          throw new Error(data.message || "Gagal mengambil data booking.");
-        }
-
-        setBookings(data.bookings || []);
-      } catch (error) {
-        console.error("Fetch bookings error:", error);
-
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Terjadi kesalahan saat mengambil booking.",
-        );
-      } finally {
-        setLoading(false);
+      if (response.status === 401) {
+        router.push("/login");
+        return;
       }
-    }
 
-    fetchBookings();
-  }, [router]);
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Gagal mengambil data booking.");
+      }
+
+      setBookings(data.bookings || []);
+    } catch (error) {
+      console.error("Fetch bookings error:", error);
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Terjadi kesalahan saat mengambil booking.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void fetchBookings(selectedDate);
+  }, [selectedDate]);
+
+  const handleDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedDate(event.target.value);
+  };
 
   const handleCancelBooking = async (bookingId: number) => {
     const confirmed = window.confirm(
@@ -152,10 +221,13 @@ export default function BookingsPage() {
     }
   };
 
+  const isToday = selectedDate === getTodayDate();
+
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-5xl px-6 py-12">
         {/* PAGE HEADER */}
+
         <div>
           <p className="text-sm font-semibold uppercase tracking-wider text-green-500">
             TableGo
@@ -166,11 +238,59 @@ export default function BookingsPage() {
           </h1>
 
           <p className="mt-2 text-gray-600">
-            Lihat dan pantau semua booking restoran kamu.
+            Lihat booking restoran berdasarkan tanggal.
           </p>
         </div>
 
+        {/* DATE FILTER */}
+
+        <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">
+                Filter Tanggal
+              </p>
+
+              <p className="mt-1 text-sm text-gray-500">
+                Pilih tanggal untuk melihat booking pada hari tersebut.
+              </p>
+            </div>
+
+            <div className="w-full sm:w-auto">
+              <label
+                htmlFor="booking-date"
+                className="text-xs font-semibold uppercase tracking-wider text-gray-400"
+              >
+                Tanggal Booking
+              </label>
+
+              <input
+                id="booking-date"
+                type="date"
+                value={selectedDate}
+                onChange={handleDateChange}
+                className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100 sm:w-64"
+              />
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-xl bg-gray-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+              Menampilkan Booking
+            </p>
+
+            <p className="mt-1 text-sm font-semibold text-gray-900">
+              {isToday ? "Hari ini" : formatSelectedDate(selectedDate)}
+            </p>
+
+            <p className="mt-1 text-xs text-gray-500">
+              {bookings.length} booking pada tanggal ini
+            </p>
+          </div>
+        </div>
+
         {/* LOADING */}
+
         {loading && (
           <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
             <p className="text-sm text-gray-500">Memuat data booking...</p>
@@ -178,6 +298,7 @@ export default function BookingsPage() {
         )}
 
         {/* ERROR */}
+
         {!loading && errorMessage && (
           <div className="mt-8 rounded-2xl border border-red-100 bg-red-50 p-6">
             <p className="font-semibold text-red-700">{errorMessage}</p>
@@ -192,6 +313,7 @@ export default function BookingsPage() {
         )}
 
         {/* EMPTY STATE */}
+
         {!loading && !errorMessage && bookings.length === 0 && (
           <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-50 text-2xl">
@@ -199,23 +321,27 @@ export default function BookingsPage() {
             </div>
 
             <h2 className="mt-5 text-xl font-bold text-gray-900">
-              Belum ada booking
+              Tidak ada booking
             </h2>
 
             <p className="mt-2 text-sm text-gray-500">
-              Kamu belum memiliki booking restoran.
+              Tidak ada booking pada{" "}
+              {isToday ? "hari ini" : formatSelectedDate(selectedDate)}.
             </p>
 
-            <Link
-              href="/restaurants"
-              className="mt-6 inline-block rounded-xl bg-green-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-green-600"
-            >
-              Cari Restoran
-            </Link>
+            {isToday && (
+              <Link
+                href="/restaurants"
+                className="mt-6 inline-block rounded-xl bg-green-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-green-600"
+              >
+                Cari Restoran
+              </Link>
+            )}
           </div>
         )}
 
         {/* BOOKING LIST */}
+
         {!loading && !errorMessage && bookings.length > 0 && (
           <div className="mt-8 space-y-5">
             {bookings.map((booking) => {
@@ -228,6 +354,7 @@ export default function BookingsPage() {
                 >
                   <div className="p-6">
                     {/* RESTAURANT + STATUS */}
+
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
@@ -251,6 +378,7 @@ export default function BookingsPage() {
                     </div>
 
                     {/* BOOKING DETAILS */}
+
                     <div className="mt-6 grid gap-4 border-t border-gray-100 pt-6 sm:grid-cols-3">
                       <div>
                         <p className="text-xs font-medium text-gray-400">
@@ -285,6 +413,7 @@ export default function BookingsPage() {
                     </div>
 
                     {/* NOTES */}
+
                     {booking.notes && (
                       <div className="mt-5 rounded-xl bg-gray-50 p-4">
                         <p className="text-xs font-medium text-gray-400">
@@ -298,6 +427,7 @@ export default function BookingsPage() {
                     )}
 
                     {/* CANCEL */}
+
                     {booking.status === "PENDING" && (
                       <div className="mt-5 border-t border-gray-100 pt-5">
                         <button

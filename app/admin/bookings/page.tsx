@@ -85,6 +85,24 @@ const statusConfig: Record<
   },
 };
 
+// =========================
+// GET TODAY DATE
+// =========================
+
+function getTodayDate() {
+  const today = new Date();
+
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+// =========================
+// FORMAT DATE
+// =========================
+
 function formatDate(dateString: string) {
   const date = new Date(dateString);
 
@@ -100,6 +118,10 @@ function formatDate(dateString: string) {
   }).format(date);
 }
 
+// =========================
+// FORMAT TIME
+// =========================
+
 function formatTime(dateString: string) {
   const date = new Date(dateString);
 
@@ -113,6 +135,10 @@ function formatTime(dateString: string) {
   }).format(date);
 }
 
+// =========================
+// GET DATE INPUT VALUE
+// =========================
+
 function getDateInputValue(dateString: string) {
   const date = new Date(dateString);
 
@@ -125,6 +151,29 @@ function getDateInputValue(dateString: string) {
   const day = String(date.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+}
+
+// =========================
+// FORMAT SELECTED DATE
+// =========================
+
+function formatSelectedDate(dateString: string) {
+  if (!dateString) {
+    return "Semua tanggal";
+  }
+
+  const date = new Date(`${dateString}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateString;
+  }
+
+  return new Intl.DateTimeFormat("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
 }
 
 export default function AdminBookingsPage() {
@@ -145,8 +194,11 @@ export default function AdminBookingsPage() {
   // =========================
 
   const [searchQuery, setSearchQuery] = useState("");
+
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
-  const [dateFilter, setDateFilter] = useState("");
+
+  // DEFAULT = HARI INI
+  const [dateFilter, setDateFilter] = useState(getTodayDate());
 
   // =========================
   // FETCH ADMIN USER
@@ -305,7 +357,6 @@ export default function AdminBookingsPage() {
         throw new Error(data.message || "Gagal memperbarui status booking.");
       }
 
-      // Update booking di layar tanpa reload
       setBookings((currentBookings) =>
         currentBookings.map((booking) =>
           booking.id === bookingId
@@ -317,7 +368,6 @@ export default function AdminBookingsPage() {
         ),
       );
 
-      // Pastikan data dari database tetap sinkron
       await fetchBookings();
     } catch (error) {
       console.error("Update booking status error:", error);
@@ -360,26 +410,26 @@ export default function AdminBookingsPage() {
   }, [bookings, searchQuery, statusFilter, dateFilter]);
 
   // =========================
-  // COUNTERS
+  // STATISTICS
   // =========================
 
-  const pendingCount = bookings.filter(
+  const pendingCount = filteredBookings.filter(
     (booking) => booking.status === "PENDING",
   ).length;
 
-  const confirmedCount = bookings.filter(
+  const confirmedCount = filteredBookings.filter(
     (booking) => booking.status === "CONFIRMED",
   ).length;
 
-  const completedCount = bookings.filter(
+  const completedCount = filteredBookings.filter(
     (booking) => booking.status === "COMPLETED",
   ).length;
 
-  const cancelledCount = bookings.filter(
+  const cancelledCount = filteredBookings.filter(
     (booking) => booking.status === "CANCELLED",
   ).length;
 
-  const expiredCount = bookings.filter(
+  const expiredCount = filteredBookings.filter(
     (booking) => booking.status === "EXPIRED",
   ).length;
 
@@ -390,11 +440,15 @@ export default function AdminBookingsPage() {
   const resetFilters = () => {
     setSearchQuery("");
     setStatusFilter("ALL");
-    setDateFilter("");
+
+    // RESET KE HARI INI
+    setDateFilter(getTodayDate());
   };
 
   const hasActiveFilters =
-    searchQuery.trim() !== "" || statusFilter !== "ALL" || dateFilter !== "";
+    searchQuery.trim() !== "" ||
+    statusFilter !== "ALL" ||
+    dateFilter !== getTodayDate();
 
   // =========================
   // RENDER
@@ -418,7 +472,7 @@ export default function AdminBookingsPage() {
             </h1>
 
             <p className="mt-2 text-gray-600">
-              Pantau dan proses seluruh booking restoran.
+              Pantau dan proses booking restoran berdasarkan tanggal.
             </p>
 
             {user && (
@@ -441,10 +495,34 @@ export default function AdminBookingsPage() {
         </div>
 
         {/* =========================
+            TODAY INDICATOR
+        ========================= */}
+
+        <div className="mt-8 rounded-2xl border border-green-100 bg-green-50 px-5 py-4">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-green-600">
+                Booking yang ditampilkan
+              </p>
+
+              <p className="mt-1 text-base font-bold text-gray-900">
+                {formatSelectedDate(dateFilter)}
+              </p>
+            </div>
+
+            {dateFilter === getTodayDate() && (
+              <span className="w-fit rounded-full bg-green-500 px-3 py-1.5 text-xs font-semibold text-white">
+                Hari Ini
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* =========================
             SUMMARY
         ========================= */}
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <p className="text-sm font-medium text-gray-500">
               Menunggu Konfirmasi
@@ -492,13 +570,13 @@ export default function AdminBookingsPage() {
             FILTER
         ========================= */}
 
-        {!loading && !errorMessage && bookings.length > 0 && (
+        {!loading && !errorMessage && (
           <section className="mt-8 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-1">
               <h2 className="font-bold text-gray-900">Filter Booking</h2>
 
               <p className="text-sm text-gray-500">
-                Cari berdasarkan customer, restoran, meja, status, atau tanggal.
+                Pilih tanggal untuk melihat booking pada hari tertentu.
               </p>
             </div>
 
@@ -562,7 +640,7 @@ export default function AdminBookingsPage() {
                   htmlFor="date-filter"
                   className="text-xs font-semibold uppercase tracking-wider text-gray-500"
                 >
-                  Tanggal
+                  Tanggal Booking
                 </label>
 
                 <input
@@ -588,17 +666,18 @@ export default function AdminBookingsPage() {
               </div>
             </div>
 
+            {/* RESULT COUNT */}
+
             <div className="mt-4 flex flex-col gap-2 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-gray-500">
                 Menampilkan{" "}
                 <span className="font-semibold text-gray-900">
                   {filteredBookings.length}
                 </span>{" "}
-                dari{" "}
+                booking pada{" "}
                 <span className="font-semibold text-gray-900">
-                  {bookings.length}
-                </span>{" "}
-                booking
+                  {formatSelectedDate(dateFilter)}
+                </span>
               </p>
 
               {hasActiveFilters && (
@@ -641,6 +720,38 @@ export default function AdminBookingsPage() {
         )}
 
         {/* =========================
+            NO BOOKING FOR SELECTED DATE
+        ========================= */}
+
+        {!loading &&
+          !errorMessage &&
+          bookings.length > 0 &&
+          filteredBookings.length === 0 && (
+            <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 text-2xl">
+                📅
+              </div>
+
+              <h2 className="mt-5 text-xl font-bold text-gray-900">
+                Tidak ada booking
+              </h2>
+
+              <p className="mt-2 text-sm text-gray-500">
+                Tidak ada booking yang sesuai dengan tanggal, status, atau
+                pencarian yang dipilih.
+              </p>
+
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="mt-5 rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"
+              >
+                Kembali ke Hari Ini
+              </button>
+            </div>
+          )}
+
+        {/* =========================
             EMPTY DATABASE
         ========================= */}
 
@@ -667,37 +778,6 @@ export default function AdminBookingsPage() {
             </button>
           </div>
         )}
-
-        {/* =========================
-            FILTER EMPTY
-        ========================= */}
-
-        {!loading &&
-          !errorMessage &&
-          bookings.length > 0 &&
-          filteredBookings.length === 0 && (
-            <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 text-2xl">
-                🔎
-              </div>
-
-              <h2 className="mt-5 text-xl font-bold text-gray-900">
-                Booking tidak ditemukan
-              </h2>
-
-              <p className="mt-2 text-sm text-gray-500">
-                Tidak ada booking yang sesuai dengan filter yang dipilih.
-              </p>
-
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="mt-5 rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"
-              >
-                Reset Filter
-              </button>
-            </div>
-          )}
 
         {/* =========================
             BOOKING LIST
