@@ -104,10 +104,9 @@ export default function ManagerNavbar() {
   const avatarLetter = user?.name?.charAt(0).toUpperCase() || "M";
 
   return (
-    <header className="sticky top-0 z-50 border-b border-gray-200/80 bg-white/95 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         {/* LOGO */}
-
         <Link
           href="/manager"
           className="shrink-0 text-2xl font-bold tracking-tight"
@@ -117,14 +116,12 @@ export default function ManagerNavbar() {
         </Link>
 
         {/* MANAGER AREA */}
-
         <div className="flex items-center gap-3">
           {loading ? (
             <div className="h-10 w-10 animate-pulse rounded-full bg-gray-100" />
           ) : (
             <div ref={profileRef} className="relative">
               {/* PROFILE BUTTON */}
-
               <button
                 type="button"
                 onClick={() => setProfileOpen((current) => !current)}
@@ -136,7 +133,6 @@ export default function ManagerNavbar() {
               </button>
 
               {/* PROFILE DROPDOWN */}
-
               {profileOpen && (
                 <div className="absolute right-0 top-12 w-80 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
                   <div className="border-b border-gray-100 p-5">
@@ -166,6 +162,7 @@ export default function ManagerNavbar() {
                       <div className="mt-3 space-y-3">
                         <div>
                           <p className="text-xs text-gray-400">Nama</p>
+
                           <p className="mt-1 text-sm font-medium text-gray-900">
                             {user?.name || "-"}
                           </p>
@@ -173,6 +170,7 @@ export default function ManagerNavbar() {
 
                         <div>
                           <p className="text-xs text-gray-400">Email</p>
+
                           <p className="mt-1 break-all text-sm font-medium text-gray-900">
                             {user?.email || "-"}
                           </p>
@@ -180,6 +178,7 @@ export default function ManagerNavbar() {
 
                         <div>
                           <p className="text-xs text-gray-400">Telepon</p>
+
                           <p className="mt-1 text-sm font-medium text-gray-900">
                             {user?.phone || "-"}
                           </p>
@@ -187,6 +186,7 @@ export default function ManagerNavbar() {
 
                         <div>
                           <p className="text-xs text-gray-400">Cabang</p>
+
                           <p className="mt-1 text-sm font-medium text-gray-900">
                             {user?.restaurant?.name || "Belum ditentukan"}
                           </p>
@@ -206,7 +206,6 @@ export default function ManagerNavbar() {
           )}
 
           {/* LOGOUT */}
-
           <button
             type="button"
             onClick={handleLogout}

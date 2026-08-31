@@ -97,10 +97,9 @@ export default function AdminNavbar() {
   const avatarLetter = user?.name?.charAt(0).toUpperCase() || "A";
 
   return (
-    <header className="sticky top-0 z-50 border-b border-gray-200/80 bg-white/95 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         {/* LOGO */}
-
         <Link
           href="/admin"
           className="shrink-0 text-2xl font-bold tracking-tight"
@@ -110,14 +109,12 @@ export default function AdminNavbar() {
         </Link>
 
         {/* ADMIN AREA */}
-
         <div className="flex items-center gap-3">
           {loading ? (
             <div className="h-10 w-10 animate-pulse rounded-full bg-gray-100" />
           ) : (
             <div ref={profileRef} className="relative">
               {/* PROFILE BUTTON */}
-
               <button
                 type="button"
                 onClick={() => setProfileOpen((current) => !current)}
@@ -129,7 +126,6 @@ export default function AdminNavbar() {
               </button>
 
               {/* PROFILE DROPDOWN */}
-
               {profileOpen && (
                 <div className="absolute right-0 top-12 w-72 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
                   <div className="border-b border-gray-100 p-5">
@@ -159,6 +155,7 @@ export default function AdminNavbar() {
                       <div className="mt-3 space-y-3">
                         <div>
                           <p className="text-xs text-gray-400">Nama</p>
+
                           <p className="mt-1 text-sm font-medium text-gray-900">
                             {user?.name || "-"}
                           </p>
@@ -166,6 +163,7 @@ export default function AdminNavbar() {
 
                         <div>
                           <p className="text-xs text-gray-400">Email</p>
+
                           <p className="mt-1 break-all text-sm font-medium text-gray-900">
                             {user?.email || "-"}
                           </p>
@@ -173,6 +171,7 @@ export default function AdminNavbar() {
 
                         <div>
                           <p className="text-xs text-gray-400">Telepon</p>
+
                           <p className="mt-1 text-sm font-medium text-gray-900">
                             {user?.phone || "-"}
                           </p>
@@ -186,7 +185,6 @@ export default function AdminNavbar() {
           )}
 
           {/* LOGOUT */}
-
           <button
             type="button"
             onClick={handleLogout}
