@@ -16,20 +16,17 @@ type Booking = {
   guestCount: number;
   status: BookingStatus;
   notes: string | null;
-
   user: {
     id: number;
     name: string;
     email: string;
     phone: string | null;
   };
-
   restaurant: {
     id: number;
     name: string;
     address: string;
   };
-
   table: {
     id: number;
     tableNumber: string;
@@ -73,22 +70,18 @@ const statusConfig: Record<
     label: "Menunggu",
     className: "bg-yellow-50 text-yellow-700",
   },
-
   CONFIRMED: {
     label: "Dikonfirmasi",
     className: "bg-green-50 text-green-700",
   },
-
   COMPLETED: {
     label: "Selesai",
     className: "bg-blue-50 text-blue-700",
   },
-
   CANCELLED: {
     label: "Dibatalkan",
     className: "bg-red-50 text-red-700",
   },
-
   EXPIRED: {
     label: "Kadaluarsa",
     className: "bg-gray-100 text-gray-600",
@@ -97,7 +90,6 @@ const statusConfig: Record<
 
 function getTodayDate() {
   const now = new Date();
-
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
@@ -152,9 +144,7 @@ export default function ManagerPage() {
   const [manager, setManager] = useState<Manager | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [totalTables, setTotalTables] = useState(0);
-
   const [selectedDate, setSelectedDate] = useState(getTodayDate());
-
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -178,7 +168,6 @@ export default function ManagerPage() {
           cache: "no-store",
           credentials: "include",
         }),
-
         fetch("/api/manager/tables", {
           method: "GET",
           cache: "no-store",
@@ -187,7 +176,6 @@ export default function ManagerPage() {
       ]);
 
       const bookingData: ApiResponse = await bookingResponse.json();
-
       const tableData: TableResponse = await tableResponse.json();
 
       if (!bookingResponse.ok || !bookingData.success) {
@@ -223,7 +211,6 @@ export default function ManagerPage() {
     const newDate = event.target.value;
 
     setSelectedDate(newDate);
-
     void loadDashboard(false, newDate);
   }
 
@@ -309,6 +296,9 @@ export default function ManagerPage() {
 
       completed: bookings.filter((booking) => booking.status === "COMPLETED")
         .length,
+
+      cancelled: bookings.filter((booking) => booking.status === "CANCELLED")
+        .length,
     };
   }, [bookings]);
 
@@ -352,7 +342,6 @@ export default function ManagerPage() {
     <main className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-7xl px-6 py-10">
         {/* HEADER */}
-
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wider text-green-600">
@@ -384,10 +373,8 @@ export default function ManagerPage() {
         </div>
 
         {/* DASHBOARD CARDS */}
-
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {/* KELOLA MEJA */}
-
           <Link
             href="/manager/tables"
             className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-green-200 hover:shadow-md"
@@ -410,7 +397,6 @@ export default function ManagerPage() {
           </Link>
 
           {/* TOTAL MEJA */}
-
           <Link
             href="/manager/tables"
             className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-green-200 hover:shadow-md"
@@ -433,11 +419,10 @@ export default function ManagerPage() {
           </Link>
 
           {/* TOTAL BOOKING */}
-
           <button
             type="button"
             onClick={scrollToBookings}
-            className="group text-left rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-green-200 hover:shadow-md"
+            className="group rounded-2xl border border-gray-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-green-200 hover:shadow-md"
           >
             <div className="flex items-start justify-between">
               <div>
@@ -461,11 +446,10 @@ export default function ManagerPage() {
           </button>
 
           {/* PENDING */}
-
           <button
             type="button"
             onClick={scrollToBookings}
-            className="text-left rounded-2xl border border-yellow-100 bg-yellow-50 p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            className="rounded-2xl border border-yellow-100 bg-yellow-50 p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
           >
             <div className="flex items-start justify-between">
               <div>
@@ -488,7 +472,6 @@ export default function ManagerPage() {
         </div>
 
         {/* BOOKING */}
-
         <div id="booking-hari-ini" className="mt-10 scroll-mt-24">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
@@ -537,8 +520,8 @@ export default function ManagerPage() {
           </div>
 
           {/* BOOKING SUMMARY */}
-
-          <div className="mt-5 grid gap-4 sm:grid-cols-3">
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {/* MENUNGGU */}
             <div className="rounded-xl border border-gray-200 bg-white p-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                 Menunggu
@@ -549,6 +532,7 @@ export default function ManagerPage() {
               </p>
             </div>
 
+            {/* DIKONFIRMASI */}
             <div className="rounded-xl border border-gray-200 bg-white p-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                 Dikonfirmasi
@@ -559,6 +543,7 @@ export default function ManagerPage() {
               </p>
             </div>
 
+            {/* SELESAI */}
             <div className="rounded-xl border border-gray-200 bg-white p-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                 Selesai
@@ -568,10 +553,20 @@ export default function ManagerPage() {
                 {statistics.completed}
               </p>
             </div>
+
+            {/* DIBATALKAN */}
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                Dibatalkan
+              </p>
+
+              <p className="mt-1 text-2xl font-bold text-red-600">
+                {statistics.cancelled}
+              </p>
+            </div>
           </div>
 
           {/* EMPTY */}
-
           {bookings.length === 0 ? (
             <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 text-2xl">
@@ -591,7 +586,6 @@ export default function ManagerPage() {
             <div className="mt-6 space-y-5">
               {bookings.map((booking) => {
                 const status = statusConfig[booking.status];
-
                 const isProcessing = processingId === booking.id;
 
                 return (
@@ -601,7 +595,6 @@ export default function ManagerPage() {
                   >
                     <div className="p-6">
                       {/* HEADER */}
-
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
@@ -629,7 +622,6 @@ export default function ManagerPage() {
                       </div>
 
                       {/* DETAIL */}
-
                       <div className="mt-6 grid gap-4 border-t border-gray-100 pt-5 sm:grid-cols-2 lg:grid-cols-4">
                         <div>
                           <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
@@ -677,7 +669,6 @@ export default function ManagerPage() {
                       </div>
 
                       {/* NOTES */}
-
                       {booking.notes && (
                         <div className="mt-5 rounded-xl bg-gray-50 p-4">
                           <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
@@ -692,6 +683,7 @@ export default function ManagerPage() {
 
                       {/* ACTIONS */}
 
+                      {/* PENDING */}
                       {booking.status === "PENDING" && (
                         <div className="mt-6 flex flex-col gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:justify-end">
                           <button
@@ -720,6 +712,7 @@ export default function ManagerPage() {
                         </div>
                       )}
 
+                      {/* CONFIRMED */}
                       {booking.status === "CONFIRMED" && (
                         <div className="mt-6 flex justify-end border-t border-gray-100 pt-5">
                           <button
@@ -735,6 +728,7 @@ export default function ManagerPage() {
                         </div>
                       )}
 
+                      {/* COMPLETED */}
                       {booking.status === "COMPLETED" && (
                         <div className="mt-6 border-t border-gray-100 pt-5">
                           <div className="rounded-xl bg-blue-50 p-4">
@@ -745,6 +739,7 @@ export default function ManagerPage() {
                         </div>
                       )}
 
+                      {/* CANCELLED */}
                       {booking.status === "CANCELLED" && (
                         <div className="mt-6 border-t border-gray-100 pt-5">
                           <div className="rounded-xl bg-red-50 p-4">
@@ -755,6 +750,7 @@ export default function ManagerPage() {
                         </div>
                       )}
 
+                      {/* EXPIRED */}
                       {booking.status === "EXPIRED" && (
                         <div className="mt-6 border-t border-gray-100 pt-5">
                           <div className="rounded-xl bg-gray-100 p-4">
