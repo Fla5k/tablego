@@ -14,6 +14,11 @@ export async function GET() {
             bookings: true,
           },
         },
+        operatingHours: {
+          orderBy: {
+            dayOfWeek: "asc",
+          },
+        },
       },
     });
 
@@ -34,6 +39,13 @@ export async function GET() {
       image: restaurant.image,
       tableCount: restaurant._count.tables,
       bookingCount: restaurant._count.bookings,
+      operatingHours: restaurant.operatingHours.map((hour) => ({
+        id: hour.id,
+        dayOfWeek: hour.dayOfWeek,
+        openTime: hour.openTime,
+        closeTime: hour.closeTime,
+        isClosed: hour.isClosed,
+      })),
     }));
 
     return NextResponse.json(

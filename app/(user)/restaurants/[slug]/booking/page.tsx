@@ -1,12 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+
 import TableSelector from "@/components/booking/TableSelector";
+
+type OperatingHour = {
+  id: number;
+  dayOfWeek: number;
+  openTime: string;
+  closeTime: string;
+  isClosed: boolean;
+};
 
 type Restaurant = {
   id: number;
   name: string;
+  operatingHours: OperatingHour[];
   tables: {
     id: number;
     tableNumber: string;
@@ -15,6 +25,57 @@ type Restaurant = {
   }[];
 };
 
+const dayNames = [
+  "Senin",
+  "Selasa",
+  "Rabu",
+  "Kamis",
+  "Jumat",
+  "Sabtu",
+  "Minggu",
+];
+
+function getIndonesiaDayOfWeek(dateString: string): number {
+  const date = new Date(`${dateString}T12:00:00+07:00`);
+
+  const day = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Jakarta",
+    weekday: "short",
+  }).format(date);
+
+  const map: Record<string, number> = {
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+    Sun: 7,
+  };
+
+  return map[day];
+}
+
+function isBookingTimeAllowed(
+  operatingHours: OperatingHour[],
+  date: string,
+  time: string,
+): boolean {
+  if (!date || !time) {
+    return false;
+  }
+
+  const dayOfWeek = getIndonesiaDayOfWeek(date);
+
+  const hour = operatingHours.find((item) => item.dayOfWeek === dayOfWeek);
+
+  if (!hour || hour.isClosed) {
+    return false;
+  }
+
+  return time >= hour.openTime && time < hour.closeTime;
+}
+
 export default function BookingPage() {
   const router = useRouter();
   const params = useParams();
@@ -22,7 +83,6 @@ export default function BookingPage() {
   const slug = params.slug as string;
 
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
-
   const [restaurantLoading, setRestaurantLoading] = useState(true);
   const [restaurantError, setRestaurantError] = useState("");
 
@@ -44,10 +104,6 @@ export default function BookingPage() {
     "20:30",
     "21:00",
   ];
-
-  // =========================================================
-  // LOAD RESTAURANT
-  // =========================================================
 
   useEffect(() => {
     async function fetchRestaurant() {
@@ -84,13 +140,133 @@ export default function BookingPage() {
     }
   }, [slug]);
 
-  // =========================================================
-  // CONTINUE
-  // =========================================================
+  const todayDate = useMemo(() => {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Jakarta",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+  }, []);
+
+  const selectedOperatingHour = useMemo(() => {
+    if (!restaurant || !selectedDate) {
+      return null;
+    }
+
+    const dayOfWeek = getIndonesiaDayOfWeek(selectedDate);
+
+    return (
+      restaurant.operatingHours.find((item) => item.dayOfWeek === dayOfWeek) ??
+      null
+    );
+  }, [restaurant, selectedDate]);
+
+  const selectedDateIsClosed = Boolean(
+    selectedOperatingHour?.isClosed || (selectedDate && !selectedOperatingHour),
+  );
+
+  const selectedTimeIsAllowed = useMemo(() => {
+    if (!restaurant || !selectedDate || !selectedTime) {
+      return false;
+    }
+
+    return isBookingTimeAllowed(
+      restaurant.operatingHours,
+      selectedDate,
+      selectedTime,
+    );
+  }, [restaurant, selectedDate, selectedTime]);
+
+  const handleDateChange = (date: string) => {
+    setSelectedDate(date);
+    setSelectedTable(null);
+    setErrorMessage("");
+
+    if (!restaurant || !date) {
+      return;
+    }
+
+    const dayOfWeek = getIndonesiaDayOfWeek(date);
+
+    const hour = restaurant.operatingHours.find(
+      (item) => item.dayOfWeek === dayOfWeek,
+    );
+
+    if (!hour || hour.isClosed) {
+      setErrorMessage(
+        `Restoran tutup pada hari ${dayNames[dayOfWeek - 1]}. Silakan pilih tanggal lain.`,
+      );
+      return;
+    }
+
+    if (selectedTime < hour.openTime || selectedTime >= hour.closeTime) {
+      setSelectedTime(hour.openTime);
+    }
+  };
+
+  const handleTimeChange = (time: string) => {
+    setSelectedTime(time);
+    setSelectedTable(null);
+    setErrorMessage("");
+
+    if (!selectedDate || !restaurant) {
+      return;
+    }
+
+    const allowed = isBookingTimeAllowed(
+      restaurant.operatingHours,
+      selectedDate,
+      time,
+    );
+
+    if (!allowed) {
+      const dayOfWeek = getIndonesiaDayOfWeek(selectedDate);
+
+      const hour = restaurant.operatingHours.find(
+        (item) => item.dayOfWeek === dayOfWeek,
+      );
+
+      if (!hour || hour.isClosed) {
+        setErrorMessage(`Restoran tutup pada hari ${dayNames[dayOfWeek - 1]}.`);
+      } else {
+        setErrorMessage(
+          `Waktu booking harus berada di antara ${hour.openTime} dan ${hour.closeTime} WIB.`,
+        );
+      }
+    }
+  };
 
   const handleContinue = () => {
+    if (!restaurant) {
+      return;
+    }
+
     if (!selectedDate) {
       setErrorMessage("Silakan pilih tanggal terlebih dahulu.");
+      return;
+    }
+
+    if (selectedDateIsClosed) {
+      const dayOfWeek = getIndonesiaDayOfWeek(selectedDate);
+
+      setErrorMessage(
+        `Restoran tutup pada hari ${dayNames[dayOfWeek - 1]}. Silakan pilih tanggal lain.`,
+      );
+      return;
+    }
+
+    if (!selectedTimeIsAllowed) {
+      const hour = selectedOperatingHour;
+
+      if (hour && !hour.isClosed) {
+        setErrorMessage(
+          `Waktu booking hanya tersedia ${hour.openTime}–${hour.closeTime} WIB.`,
+        );
+      } else {
+        setErrorMessage("Waktu booking tidak tersedia.");
+      }
+
       return;
     }
 
@@ -113,10 +289,6 @@ export default function BookingPage() {
     );
   };
 
-  // =========================================================
-  // LOADING
-  // =========================================================
-
   if (restaurantLoading) {
     return (
       <main className="min-h-screen bg-gray-50">
@@ -128,10 +300,6 @@ export default function BookingPage() {
       </main>
     );
   }
-
-  // =========================================================
-  // ERROR
-  // =========================================================
 
   if (restaurantError || !restaurant) {
     return (
@@ -159,14 +327,9 @@ export default function BookingPage() {
     );
   }
 
-  // =========================================================
-  // MAIN
-  // =========================================================
-
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-7xl px-6 py-10">
-        {/* Heading */}
         <div className="mb-8">
           <p className="text-sm font-semibold uppercase tracking-wider text-green-500">
             Booking Meja
@@ -182,12 +345,7 @@ export default function BookingPage() {
         </div>
 
         <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_400px]">
-          {/* =================================================
-              LEFT
-          ================================================= */}
-
           <div className="space-y-6">
-            {/* DATE */}
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-3">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-sm font-bold text-white">
@@ -202,17 +360,37 @@ export default function BookingPage() {
               <input
                 type="date"
                 value={selectedDate}
-                min={new Date().toLocaleDateString("en-CA")}
-                onChange={(event) => {
-                  setSelectedDate(event.target.value);
-                  setSelectedTable(null);
-                  setErrorMessage("");
-                }}
+                min={todayDate}
+                onChange={(event) => handleDateChange(event.target.value)}
                 className="mt-5 w-full rounded-xl border border-gray-200 px-4 py-3 text-gray-700 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
               />
+
+              {selectedDate && selectedOperatingHour && (
+                <div
+                  className={`mt-4 rounded-xl px-4 py-3 text-sm ${
+                    selectedOperatingHour.isClosed
+                      ? "bg-red-50 text-red-600"
+                      : "bg-green-50 text-green-700"
+                  }`}
+                >
+                  {selectedOperatingHour.isClosed ? (
+                    <span className="font-medium">
+                      Restoran tutup pada hari{" "}
+                      {dayNames[selectedOperatingHour.dayOfWeek - 1]}.
+                    </span>
+                  ) : (
+                    <span>
+                      Jam operasional:{" "}
+                      <strong>
+                        {selectedOperatingHour.openTime}–
+                        {selectedOperatingHour.closeTime} WIB
+                      </strong>
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* TIME */}
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-3">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-sm font-bold text-white">
@@ -225,28 +403,42 @@ export default function BookingPage() {
               </div>
 
               <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-4">
-                {timeSlots.map((time) => (
-                  <button
-                    key={time}
-                    type="button"
-                    onClick={() => {
-                      setSelectedTime(time);
-                      setSelectedTable(null);
-                      setErrorMessage("");
-                    }}
-                    className={`rounded-xl border px-4 py-3 text-sm font-medium transition ${
-                      selectedTime === time
-                        ? "border-green-500 bg-green-500 text-white shadow-sm"
-                        : "border-gray-200 bg-white text-gray-700 hover:border-green-300 hover:bg-green-50"
-                    }`}
-                  >
-                    {time}
-                  </button>
-                ))}
+                {timeSlots.map((time) => {
+                  const allowed =
+                    !selectedDate ||
+                    isBookingTimeAllowed(
+                      restaurant.operatingHours,
+                      selectedDate,
+                      time,
+                    );
+
+                  return (
+                    <button
+                      key={time}
+                      type="button"
+                      disabled={!allowed}
+                      onClick={() => handleTimeChange(time)}
+                      className={`rounded-xl border px-4 py-3 text-sm font-medium transition ${
+                        !allowed
+                          ? "cursor-not-allowed border-gray-100 bg-gray-100 text-gray-300"
+                          : selectedTime === time
+                            ? "border-green-500 bg-green-500 text-white shadow-sm"
+                            : "border-gray-200 bg-white text-gray-700 hover:border-green-300 hover:bg-green-50"
+                      }`}
+                    >
+                      {time}
+                    </button>
+                  );
+                })}
               </div>
+
+              {selectedDateIsClosed && (
+                <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-center text-sm font-medium text-red-500">
+                  Restoran tutup pada tanggal yang dipilih.
+                </p>
+              )}
             </div>
 
-            {/* GUEST */}
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-3">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-sm font-bold text-white">
@@ -291,7 +483,6 @@ export default function BookingPage() {
               </div>
             </div>
 
-            {/* SUMMARY */}
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="flex items-start justify-between gap-6">
                 <div>
@@ -352,7 +543,13 @@ export default function BookingPage() {
               <button
                 type="button"
                 onClick={handleContinue}
-                className="mt-6 w-full rounded-xl bg-green-500 px-5 py-3.5 font-semibold text-white transition hover:bg-green-600"
+                disabled={
+                  !selectedDate ||
+                  selectedDateIsClosed ||
+                  !selectedTimeIsAllowed ||
+                  !selectedTable
+                }
+                className="mt-6 w-full rounded-xl bg-green-500 px-5 py-3.5 font-semibold text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-300"
               >
                 Lanjutkan
               </button>
@@ -362,10 +559,6 @@ export default function BookingPage() {
               </p>
             </div>
           </div>
-
-          {/* =================================================
-              RIGHT
-          ================================================= */}
 
           <aside className="lg:sticky lg:top-6">
             <TableSelector

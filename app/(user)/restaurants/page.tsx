@@ -3,6 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+type OperatingHour = {
+  id: number;
+  dayOfWeek: number;
+  openTime: string;
+  closeTime: string;
+  isClosed: boolean;
+};
+
 type Restaurant = {
   id: number;
   name: string;
@@ -13,7 +21,72 @@ type Restaurant = {
   image: string | null;
   tableCount: number;
   bookingCount: number;
+  operatingHours: OperatingHour[];
 };
+
+const DAY_NAMES = [
+  "Senin",
+  "Selasa",
+  "Rabu",
+  "Kamis",
+  "Jumat",
+  "Sabtu",
+  "Minggu",
+];
+
+function getIndonesiaDayOfWeek(): number {
+  const day = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Jakarta",
+    weekday: "short",
+  }).format(new Date());
+
+  const map: Record<string, number> = {
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+    Sun: 7,
+  };
+
+  return map[day];
+}
+
+function getIndonesiaTime(): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Jakarta",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date());
+}
+
+function getRestaurantOperatingStatus(operatingHours: OperatingHour[]) {
+  const dayOfWeek = getIndonesiaDayOfWeek();
+
+  const today = operatingHours.find((hour) => hour.dayOfWeek === dayOfWeek);
+
+  if (!today || today.isClosed) {
+    return {
+      isOpen: false,
+      isClosedDay: true,
+      today,
+      dayName: DAY_NAMES[dayOfWeek - 1],
+    };
+  }
+
+  const currentTime = getIndonesiaTime();
+
+  const isOpen = currentTime >= today.openTime && currentTime < today.closeTime;
+
+  return {
+    isOpen,
+    isClosedDay: false,
+    today,
+    dayName: DAY_NAMES[dayOfWeek - 1],
+  };
+}
 
 export default function RestaurantsPage() {
   const router = useRouter();
@@ -60,7 +133,6 @@ export default function RestaurantsPage() {
   // =========================
   // CEK LOGIN SEBELUM LIHAT RESTORAN
   // =========================
-
   const handleViewRestaurant = async (slug: string) => {
     try {
       setCheckingAuthSlug(slug);
@@ -161,6 +233,10 @@ export default function RestaurantsPage() {
               {restaurants.map((restaurant) => {
                 const isCheckingAuth = checkingAuthSlug === restaurant.slug;
 
+                const status = getRestaurantOperatingStatus(
+                  restaurant.operatingHours,
+                );
+
                 return (
                   <article
                     key={restaurant.id}
@@ -188,8 +264,13 @@ export default function RestaurantsPage() {
                         Restoran
                       </div>
 
-                      <div className="absolute right-4 top-4 rounded-full bg-green-500 px-3 py-1 text-sm font-medium text-white">
-                        Tersedia
+                      {/* Status */}
+                      <div
+                        className={`absolute right-4 top-4 rounded-full px-3 py-1 text-sm font-medium text-white shadow-sm ${
+                          status.isOpen ? "bg-green-500" : "bg-red-500"
+                        }`}
+                      >
+                        {status.isOpen ? "Buka" : "Tutup"}
                       </div>
                     </div>
 
@@ -208,6 +289,52 @@ export default function RestaurantsPage() {
                       <p className="mt-4 line-clamp-2 text-sm leading-6 text-gray-600">
                         {restaurant.description}
                       </p>
+
+                      {/* Operating Hours */}
+                      <div className="mt-5 rounded-xl bg-gray-50 p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
+                              Jam Operasional
+                            </p>
+
+                            <p className="mt-1 text-sm font-semibold text-gray-900">
+                              {status.dayName}
+                            </p>
+                          </div>
+
+                          {status.today && !status.today.isClosed && (
+                            <div className="text-right">
+                              <p className="text-sm font-semibold text-gray-900">
+                                {status.today.openTime} -{" "}
+                                {status.today.closeTime}
+                              </p>
+
+                              <p className="mt-1 text-xs text-gray-400">WIB</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {status.isClosedDay && (
+                          <p className="mt-3 text-sm font-medium text-red-500">
+                            Tutup hari ini
+                          </p>
+                        )}
+
+                        {!status.isClosedDay &&
+                          !status.isOpen &&
+                          status.today && (
+                            <p className="mt-3 text-sm font-medium text-red-500">
+                              Saat ini tutup
+                            </p>
+                          )}
+
+                        {status.isOpen && (
+                          <p className="mt-3 text-sm font-medium text-green-600">
+                            Sedang buka
+                          </p>
+                        )}
+                      </div>
 
                       {/* Stats */}
                       <div className="mt-5 grid grid-cols-2 gap-3">

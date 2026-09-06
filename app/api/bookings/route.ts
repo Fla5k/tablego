@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+
 import { prisma } from "@/lib/prisma";
+import { isWithinOperatingHours } from "@/lib/restaurant-hours";
 
 const SESSION_COOKIE = "tablego_session";
 
@@ -119,11 +121,29 @@ export async function POST(request: Request) {
           select: {
             id: true,
             name: true,
+            operatingHours: {
+              orderBy: {
+                dayOfWeek: "asc",
+              },
+            },
           },
         });
 
         if (!restaurant) {
           throw new Error("RESTAURANT_NOT_FOUND");
+        }
+
+        // -----------------------------------------------------
+        // CEK JAM OPERASIONAL
+        // -----------------------------------------------------
+
+        const withinOperatingHours = isWithinOperatingHours(
+          restaurant.operatingHours,
+          parsedBookingDate,
+        );
+
+        if (!withinOperatingHours) {
+          throw new Error("OUTSIDE_OPERATING_HOURS");
         }
 
         // -----------------------------------------------------
@@ -158,9 +178,7 @@ export async function POST(request: Request) {
         // CEK SPAM BOOKING USER
         //
         // Satu user hanya boleh memiliki satu booking aktif
-        // pada restoran dan tanggal yang sama.
-        //
-        // PENDING dan CONFIRMED sama-sama dianggap aktif.
+        // pada restoran dan tanggal/waktu tersebut.
         // -----------------------------------------------------
 
         const existingUserBooking = await tx.booking.findFirst({
@@ -279,11 +297,22 @@ export async function POST(request: Request) {
             { status: 404 },
           );
 
+        case "OUTSIDE_OPERATING_HOURS":
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "Booking tidak dapat dilakukan di luar jam operasional restoran.",
+            },
+            { status: 400 },
+          );
+
         case "TABLE_NOT_FOUND":
           return NextResponse.json(
             {
               success: false,
-              message: "Meja tidak ditemukan di restoran tersebut.",
+              message:
+                "Meja tidak ditemukan di restoran tersebut.",
             },
             { status: 404 },
           );
@@ -292,7 +321,8 @@ export async function POST(request: Request) {
           return NextResponse.json(
             {
               success: false,
-              message: "Jumlah tamu melebihi kapasitas meja.",
+              message:
+                "Jumlah tamu melebihi kapasitas meja.",
             },
             { status: 400 },
           );

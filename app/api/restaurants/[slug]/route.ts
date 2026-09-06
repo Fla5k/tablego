@@ -1,54 +1,24 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-type RouteContext = {
-  params: Promise<{
-    slug: string;
-  }>;
-};
-
 export async function GET(
   request: Request,
-  { params }: RouteContext,
+  { params }: { params: Promise<{ slug: string }> },
 ) {
   try {
     const { slug } = await params;
 
     const url = new URL(request.url);
-
     const date = url.searchParams.get("date");
     const time = url.searchParams.get("time");
 
-    // =========================================================
-    // PARSE WAKTU BOOKING
-    // =========================================================
-
-    let selectedDateTime: Date | null = null;
-
-    if (date && time) {
-      const dateTimeString = `${date}T${time}:00+07:00`;
-
-      const parsedDateTime = new Date(dateTimeString);
-
-      if (Number.isNaN(parsedDateTime.getTime())) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Tanggal atau waktu tidak valid.",
-          },
-          { status: 400 },
-        );
-      }
-
-      selectedDateTime = parsedDateTime;
-    }
-
-    // =========================================================
-    // CARI RESTORAN
-    // =========================================================
-
     const restaurants = await prisma.restaurant.findMany({
       include: {
+        operatingHours: {
+          orderBy: {
+            dayOfWeek: "asc",
+          },
+        },
         tables: {
           include: {
             bookings: {
@@ -56,11 +26,6 @@ export async function GET(
                 status: {
                   in: ["PENDING", "CONFIRMED"],
                 },
-              },
-              select: {
-                id: true,
-                bookingDate: true,
-                status: true,
               },
             },
           },
@@ -70,8 +35,7 @@ export async function GET(
 
     const restaurant = restaurants.find(
       (item) =>
-        item.name.toLowerCase().replace(/\s+/g, "-") ===
-        slug.toLowerCase(),
+        item.name.toLowerCase().replace(/\s+/g, "-") === slug.toLowerCase(),
     );
 
     if (!restaurant) {
@@ -84,35 +48,53 @@ export async function GET(
       );
     }
 
-    // =========================================================
-    // CEK KETERSEDIAAN MEJA
-    // =========================================================
+    if ((date && !time) || (!date && time)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Tanggal atau waktu tidak lengkap.",
+        },
+        { status: 400 },
+      );
+    }
 
-    const now = new Date();
+    let selectedDateTime: Date | null = null;
+
+    if (date && time) {
+      if (
+        !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+        !/^\d{2}:\d{2}$/.test(time)
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Tanggal atau waktu tidak valid.",
+          },
+          { status: 400 },
+        );
+      }
+
+      selectedDateTime = new Date(`${date}T${time}:00+07:00`);
+
+      if (Number.isNaN(selectedDateTime.getTime())) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Tanggal atau waktu tidak valid.",
+          },
+          { status: 400 },
+        );
+      }
+    }
 
     const tables = restaurant.tables.map((table) => {
       let available = true;
 
       if (selectedDateTime) {
         available = !table.bookings.some((booking) => {
-          const bookingDate = new Date(booking.bookingDate);
+          const bookingTime = new Date(booking.bookingDate);
 
-          // ---------------------------------------------------
-          // BOOKING YANG SUDAH LEWAT TIDAK MENGUNCI MEJA
-          // ---------------------------------------------------
-
-          if (
-            booking.status === "PENDING" &&
-            bookingDate.getTime() < now.getTime()
-          ) {
-            return false;
-          }
-
-          // ---------------------------------------------------
-          // BOOKING HANYA BENTROK JIKA WAKTUNYA SAMA
-          // ---------------------------------------------------
-
-          return bookingDate.getTime() === selectedDateTime.getTime();
+          return bookingTime.getTime() === selectedDateTime!.getTime();
         });
       }
 
@@ -124,25 +106,21 @@ export async function GET(
       };
     });
 
-    // =========================================================
-    // RESPONSE
-    // =========================================================
-
-    return NextResponse.json(
-      {
-        success: true,
-        restaurant: {
-          id: restaurant.id,
-          name: restaurant.name,
-          description: restaurant.description,
-          address: restaurant.address,
-          phone: restaurant.phone,
-          image: restaurant.image,
-          tables,
-        },
+    return NextResponse.json({
+      success: true,
+      restaurant: {
+        id: restaurant.id,
+        name: restaurant.name,
+        operatingHours: restaurant.operatingHours.map((hour) => ({
+          id: hour.id,
+          dayOfWeek: hour.dayOfWeek,
+          openTime: hour.openTime,
+          closeTime: hour.closeTime,
+          isClosed: hour.isClosed,
+        })),
+        tables,
       },
-      { status: 200 },
-    );
+    });
   } catch (error) {
     console.error("Restaurant API error:", error);
 
