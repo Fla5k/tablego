@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+
 import { getCurrentAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { validateOperatingHours } from "@/lib/restaurant-hours";
 
 export async function GET() {
   try {
@@ -34,6 +36,11 @@ export async function GET() {
           },
           orderBy: {
             createdAt: "asc",
+          },
+        },
+        operatingHours: {
+          orderBy: {
+            dayOfWeek: "asc",
           },
         },
         _count: {
@@ -89,6 +96,7 @@ export async function POST(request: Request) {
       phone,
       image,
       parentId,
+      operatingHours,
     } = body;
 
     if (
@@ -101,6 +109,28 @@ export async function POST(request: Request) {
         {
           success: false,
           message: "Nama dan alamat restoran wajib diisi.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (!Array.isArray(operatingHours)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Jam operasional wajib diisi untuk 7 hari.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const operatingHoursError = validateOperatingHours(operatingHours);
+
+    if (operatingHoursError) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: operatingHoursError,
         },
         { status: 400 },
       );
@@ -128,16 +158,17 @@ export async function POST(request: Request) {
         );
       }
 
-      const parentRestaurant = await prisma.restaurant.findUnique({
-        where: {
-          id: parsedParentId,
-        },
-        select: {
-          id: true,
-          name: true,
-          parentId: true,
-        },
-      });
+      const parentRestaurant =
+        await prisma.restaurant.findUnique({
+          where: {
+            id: parsedParentId,
+          },
+          select: {
+            id: true,
+            name: true,
+            parentId: true,
+          },
+        });
 
       if (!parentRestaurant) {
         return NextResponse.json(
@@ -184,6 +215,22 @@ export async function POST(request: Request) {
             : null,
 
         parentId: parsedParentId,
+
+        operatingHours: {
+          create: operatingHours.map(
+            (hour: {
+              dayOfWeek: number;
+              openTime: string;
+              closeTime: string;
+              isClosed: boolean;
+            }) => ({
+              dayOfWeek: hour.dayOfWeek,
+              openTime: hour.openTime,
+              closeTime: hour.closeTime,
+              isClosed: hour.isClosed,
+            }),
+          ),
+        },
       },
 
       include: {
@@ -204,6 +251,12 @@ export async function POST(request: Request) {
           },
         },
 
+        operatingHours: {
+          orderBy: {
+            dayOfWeek: "asc",
+          },
+        },
+
         _count: {
           select: {
             tables: true,
@@ -217,11 +270,9 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: true,
-
         message: parsedParentId
           ? "Cabang restoran berhasil ditambahkan."
           : "Restoran utama berhasil ditambahkan.",
-
         restaurant,
       },
       { status: 201 },

@@ -3,6 +3,13 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+type OperatingHour = {
+  dayOfWeek: number;
+  openTime: string;
+  closeTime: string;
+  isClosed: boolean;
+};
+
 type Restaurant = {
   id: number;
   name: string;
@@ -13,14 +20,19 @@ type Restaurant = {
   createdAt: string;
   updatedAt: string;
   parentId: number | null;
+
   parent: {
     id: number;
     name: string;
   } | null;
+
   branches: {
     id: number;
     name: string;
   }[];
+
+  operatingHours: OperatingHour[];
+
   _count: {
     tables: number;
     bookings: number;
@@ -35,6 +47,7 @@ type RestaurantForm = {
   phone: string;
   image: string;
   parentId: string;
+  operatingHours: OperatingHour[];
 };
 
 type RestaurantTable = {
@@ -49,6 +62,23 @@ type TableForm = {
   capacity: string;
 };
 
+const dayNames = [
+  "Senin",
+  "Selasa",
+  "Rabu",
+  "Kamis",
+  "Jumat",
+  "Sabtu",
+  "Minggu",
+];
+
+const defaultOperatingHours: OperatingHour[] = dayNames.map((_, index) => ({
+  dayOfWeek: index + 1,
+  openTime: "09:00",
+  closeTime: "22:00",
+  isClosed: false,
+}));
+
 const emptyForm: RestaurantForm = {
   name: "",
   description: "",
@@ -56,6 +86,9 @@ const emptyForm: RestaurantForm = {
   phone: "",
   image: "",
   parentId: "",
+  operatingHours: defaultOperatingHours.map((hour) => ({
+    ...hour,
+  })),
 };
 
 const emptyTableForm: TableForm = {
@@ -68,7 +101,6 @@ export default function AdminRestaurantsPage() {
 
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
@@ -89,12 +121,9 @@ export default function AdminRestaurantsPage() {
 
   const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [tablesLoading, setTablesLoading] = useState(false);
-
   const [showTableForm, setShowTableForm] = useState(false);
   const [editingTableId, setEditingTableId] = useState<number | null>(null);
-
   const [tableForm, setTableForm] = useState<TableForm>(emptyTableForm);
-
   const [savingTable, setSavingTable] = useState(false);
   const [deletingTableId, setDeletingTableId] = useState<number | null>(null);
 
@@ -146,11 +175,16 @@ export default function AdminRestaurantsPage() {
 
   const openCreateForm = () => {
     setEditingId(null);
-    setForm(emptyForm);
+
+    setForm({
+      ...emptyForm,
+      operatingHours: defaultOperatingHours.map((hour) => ({
+        ...hour,
+      })),
+    });
 
     setErrorMessage("");
     setSuccessMessage("");
-
     setShowForm(true);
   };
 
@@ -171,6 +205,19 @@ export default function AdminRestaurantsPage() {
 
       const restaurant = data.restaurant;
 
+      const operatingHours =
+        Array.isArray(restaurant.operatingHours) &&
+        restaurant.operatingHours.length === 7
+          ? restaurant.operatingHours.map((hour: OperatingHour) => ({
+              dayOfWeek: hour.dayOfWeek,
+              openTime: hour.openTime,
+              closeTime: hour.closeTime,
+              isClosed: hour.isClosed,
+            }))
+          : defaultOperatingHours.map((hour) => ({
+              ...hour,
+            }));
+
       setEditingId(restaurant.id);
 
       setForm({
@@ -180,6 +227,7 @@ export default function AdminRestaurantsPage() {
         phone: restaurant.phone || "",
         image: restaurant.image || "",
         parentId: restaurant.parentId ? String(restaurant.parentId) : "",
+        operatingHours,
       });
 
       setShowForm(true);
@@ -197,7 +245,35 @@ export default function AdminRestaurantsPage() {
   const closeRestaurantForm = () => {
     setShowForm(false);
     setEditingId(null);
-    setForm(emptyForm);
+
+    setForm({
+      ...emptyForm,
+      operatingHours: defaultOperatingHours.map((hour) => ({
+        ...hour,
+      })),
+    });
+  };
+
+  // =========================
+  // OPERATING HOURS
+  // =========================
+
+  const updateOperatingHour = (
+    dayOfWeek: number,
+    field: keyof OperatingHour,
+    value: string | boolean,
+  ) => {
+    setForm((currentForm) => ({
+      ...currentForm,
+      operatingHours: currentForm.operatingHours.map((hour) =>
+        hour.dayOfWeek === dayOfWeek
+          ? {
+              ...hour,
+              [field]: value,
+            }
+          : hour,
+      ),
+    }));
   };
 
   // =========================
@@ -231,6 +307,7 @@ export default function AdminRestaurantsPage() {
             phone: form.phone,
             image: form.image,
             parentId: form.parentId || null,
+            operatingHours: form.operatingHours,
           }),
         },
       );
@@ -369,7 +446,6 @@ export default function AdminRestaurantsPage() {
   const closeTableManagement = () => {
     setSelectedRestaurantId(null);
     setTables([]);
-
     setShowTableForm(false);
     setEditingTableId(null);
     setTableForm(emptyTableForm);
@@ -389,7 +465,6 @@ export default function AdminRestaurantsPage() {
 
     setErrorMessage("");
     setSuccessMessage("");
-
     setShowTableForm(true);
   };
 
@@ -403,7 +478,6 @@ export default function AdminRestaurantsPage() {
 
     setErrorMessage("");
     setSuccessMessage("");
-
     setShowTableForm(true);
   };
 
@@ -530,7 +604,6 @@ export default function AdminRestaurantsPage() {
 
     try {
       setDeletingTableId(table.id);
-
       setErrorMessage("");
       setSuccessMessage("");
 
@@ -651,8 +724,7 @@ export default function AdminRestaurantsPage() {
                 </h2>
 
                 <p className="mt-1 text-sm text-gray-500">
-                  Isi informasi restoran dan tentukan apakah restoran ini
-                  merupakan cabang.
+                  Isi informasi restoran, cabang, dan jam operasional restoran.
                 </p>
               </div>
 
@@ -894,6 +966,141 @@ export default function AdminRestaurantsPage() {
                 </div>
               </div>
 
+              {/* JAM OPERASIONAL */}
+
+              <div className="md:col-span-2">
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-100 text-green-700">
+                      🕐
+                    </div>
+
+                    <div>
+                      <h3 className="font-bold text-gray-900">
+                        Jam Operasional
+                      </h3>
+
+                      <p className="mt-1 text-sm text-gray-600">
+                        Tentukan jam buka dan tutup restoran untuk setiap hari.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 space-y-3">
+                    {form.operatingHours.map((hour) => {
+                      const dayName = dayNames[hour.dayOfWeek - 1];
+
+                      return (
+                        <div
+                          key={hour.dayOfWeek}
+                          className="rounded-xl border border-gray-200 bg-white p-4"
+                        >
+                          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="w-20">
+                                <p className="font-semibold text-gray-900">
+                                  {dayName}
+                                </p>
+                              </div>
+
+                              <label className="flex cursor-pointer items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={hour.isClosed}
+                                  onChange={(event) =>
+                                    updateOperatingHour(
+                                      hour.dayOfWeek,
+                                      "isClosed",
+                                      event.target.checked,
+                                    )
+                                  }
+                                  className="h-4 w-4 rounded border-gray-300 text-green-500 focus:ring-green-500"
+                                />
+
+                                <span className="text-sm font-medium text-gray-600">
+                                  Tutup
+                                </span>
+                              </label>
+                            </div>
+
+                            {!hour.isClosed ? (
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                                <div>
+                                  <label
+                                    htmlFor={`open-${hour.dayOfWeek}`}
+                                    className="mb-1 block text-xs font-medium text-gray-500"
+                                  >
+                                    Buka
+                                  </label>
+
+                                  <input
+                                    id={`open-${hour.dayOfWeek}`}
+                                    type="time"
+                                    value={hour.openTime}
+                                    onChange={(event) =>
+                                      updateOperatingHour(
+                                        hour.dayOfWeek,
+                                        "openTime",
+                                        event.target.value,
+                                      )
+                                    }
+                                    required={!hour.isClosed}
+                                    className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-green-500 focus:bg-white focus:ring-2 focus:ring-green-100"
+                                  />
+                                </div>
+
+                                <span className="hidden pb-3 text-sm text-gray-400 sm:block">
+                                  sampai
+                                </span>
+
+                                <div>
+                                  <label
+                                    htmlFor={`close-${hour.dayOfWeek}`}
+                                    className="mb-1 block text-xs font-medium text-gray-500"
+                                  >
+                                    Tutup
+                                  </label>
+
+                                  <input
+                                    id={`close-${hour.dayOfWeek}`}
+                                    type="time"
+                                    value={hour.closeTime}
+                                    onChange={(event) =>
+                                      updateOperatingHour(
+                                        hour.dayOfWeek,
+                                        "closeTime",
+                                        event.target.value,
+                                      )
+                                    }
+                                    required={!hour.isClosed}
+                                    className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-green-500 focus:bg-white focus:ring-2 focus:ring-green-100"
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="rounded-lg bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600">
+                                Restoran Tutup
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-green-100 bg-green-50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-green-700">
+                      Informasi
+                    </p>
+
+                    <p className="mt-1 text-sm text-green-800">
+                      Booking hanya dapat dilakukan pada jam operasional
+                      restoran.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* BUTTON */}
 
               <div className="flex gap-3 md:col-span-2">
@@ -1006,6 +1213,39 @@ export default function AdminRestaurantsPage() {
                       <p className="mt-3 line-clamp-2 text-sm text-gray-600">
                         {restaurant.description}
                       </p>
+                    )}
+
+                    {/* OPERATING HOURS */}
+
+                    {restaurant.operatingHours?.length > 0 && (
+                      <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                          Jam Operasional
+                        </p>
+
+                        <div className="mt-2 space-y-1">
+                          {restaurant.operatingHours.map((hour) => (
+                            <div
+                              key={hour.dayOfWeek}
+                              className="flex items-center justify-between text-sm"
+                            >
+                              <span className="font-medium text-gray-700">
+                                {dayNames[hour.dayOfWeek - 1]}
+                              </span>
+
+                              {hour.isClosed ? (
+                                <span className="font-semibold text-red-500">
+                                  Tutup
+                                </span>
+                              ) : (
+                                <span className="text-gray-600">
+                                  {hour.openTime} - {hour.closeTime}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
 
                     {/* BRANCHES */}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getCurrentAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { validateOperatingHours } from "@/lib/restaurant-hours";
 
 export async function GET(
   request: Request,
@@ -56,6 +57,11 @@ export async function GET(
         tables: {
           orderBy: {
             tableNumber: "asc",
+          },
+        },
+        operatingHours: {
+          orderBy: {
+            dayOfWeek: "asc",
           },
         },
         _count: {
@@ -156,6 +162,7 @@ export async function PATCH(
       phone,
       image,
       parentId,
+      operatingHours,
     } = body;
 
     if (name !== undefined) {
@@ -214,15 +221,16 @@ export async function PATCH(
           );
         }
 
-        const parentRestaurant = await prisma.restaurant.findUnique({
-          where: {
-            id: parsedParentId,
-          },
-          select: {
-            id: true,
-            parentId: true,
-          },
-        });
+        const parentRestaurant =
+          await prisma.restaurant.findUnique({
+            where: {
+              id: parsedParentId,
+            },
+            select: {
+              id: true,
+              parentId: true,
+            },
+          });
 
         if (!parentRestaurant) {
           return NextResponse.json(
@@ -247,69 +255,171 @@ export async function PATCH(
       }
     }
 
-    const restaurant = await prisma.restaurant.update({
-      where: {
-        id: restaurantId,
+    let normalizedOperatingHours:
+      | {
+          dayOfWeek: number;
+          openTime: string;
+          closeTime: string;
+          isClosed: boolean;
+        }[]
+      | undefined = undefined;
+
+    if (operatingHours !== undefined) {
+      if (!Array.isArray(operatingHours)) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Jam operasional harus berupa data 7 hari.",
+          },
+          { status: 400 },
+        );
+      }
+
+      for (const hour of operatingHours) {
+        if (
+          !hour ||
+          typeof hour !== "object" ||
+          typeof hour.dayOfWeek !== "number" ||
+          typeof hour.openTime !== "string" ||
+          typeof hour.closeTime !== "string" ||
+          typeof hour.isClosed !== "boolean"
+        ) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "Format data jam operasional tidak valid.",
+            },
+            { status: 400 },
+          );
+        }
+      }
+
+      normalizedOperatingHours = operatingHours.map(
+        (hour) => ({
+          dayOfWeek: hour.dayOfWeek,
+          openTime: hour.openTime,
+          closeTime: hour.closeTime,
+          isClosed: hour.isClosed,
+        }),
+      );
+
+      const operatingHoursError =
+        validateOperatingHours(normalizedOperatingHours);
+
+      if (operatingHoursError) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: operatingHoursError,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    const restaurant = await prisma.$transaction(
+      async (tx) => {
+        await tx.restaurant.update({
+          where: {
+            id: restaurantId,
+          },
+          data: {
+            ...(name !== undefined && {
+              name: name.trim(),
+            }),
+
+            ...(description !== undefined && {
+              description:
+                typeof description === "string" &&
+                description.trim()
+                  ? description.trim()
+                  : null,
+            }),
+
+            ...(address !== undefined && {
+              address: address.trim(),
+            }),
+
+            ...(phone !== undefined && {
+              phone:
+                typeof phone === "string" && phone.trim()
+                  ? phone.trim()
+                  : null,
+            }),
+
+            ...(image !== undefined && {
+              image:
+                typeof image === "string" && image.trim()
+                  ? image.trim()
+                  : null,
+            }),
+
+            ...(parentId !== undefined && {
+              parentId: parsedParentId,
+            }),
+          },
+        });
+
+        if (normalizedOperatingHours !== undefined) {
+          await tx.restaurantOperatingHour.deleteMany({
+            where: {
+              restaurantId,
+            },
+          });
+
+          await tx.restaurantOperatingHour.createMany({
+            data: normalizedOperatingHours.map(
+              (hour) => ({
+                restaurantId,
+                dayOfWeek: hour.dayOfWeek,
+                openTime: hour.openTime,
+                closeTime: hour.closeTime,
+                isClosed: hour.isClosed,
+              }),
+            ),
+          });
+        }
+
+        return tx.restaurant.findUnique({
+          where: {
+            id: restaurantId,
+          },
+          include: {
+            parent: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+
+            branches: {
+              select: {
+                id: true,
+                name: true,
+              },
+              orderBy: {
+                createdAt: "asc",
+              },
+            },
+
+            operatingHours: {
+              orderBy: {
+                dayOfWeek: "asc",
+              },
+            },
+
+            _count: {
+              select: {
+                tables: true,
+                bookings: true,
+                branches: true,
+              },
+            },
+          },
+        });
       },
-      data: {
-        ...(name !== undefined && {
-          name: name.trim(),
-        }),
-
-        ...(description !== undefined && {
-          description:
-            typeof description === "string" && description.trim()
-              ? description.trim()
-              : null,
-        }),
-
-        ...(address !== undefined && {
-          address: address.trim(),
-        }),
-
-        ...(phone !== undefined && {
-          phone:
-            typeof phone === "string" && phone.trim()
-              ? phone.trim()
-              : null,
-        }),
-
-        ...(image !== undefined && {
-          image:
-            typeof image === "string" && image.trim()
-              ? image.trim()
-              : null,
-        }),
-
-        ...(parentId !== undefined && {
-          parentId: parsedParentId,
-        }),
-      },
-      include: {
-        parent: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        branches: {
-          select: {
-            id: true,
-            name: true,
-          },
-          orderBy: {
-            createdAt: "asc",
-          },
-        },
-        _count: {
-          select: {
-            tables: true,
-            bookings: true,
-            branches: true,
-          },
-        },
-      },
-    });
+    );
 
     return NextResponse.json(
       {
