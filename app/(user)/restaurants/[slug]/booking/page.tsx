@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+
 import { useParams, useRouter } from "next/navigation";
 
 import TableSelector from "@/components/booking/TableSelector";
@@ -56,6 +57,42 @@ function getIndonesiaDayOfWeek(dateString: string): number {
   return map[day];
 }
 
+function timeToMinutes(time: string): number {
+  const [hours, minutes] = time.split(":").map(Number);
+
+  return hours * 60 + minutes;
+}
+
+function minutesToTime(totalMinutes: number): string {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  return `${hours.toString().padStart(2, "0")}:${minutes
+    .toString()
+    .padStart(2, "0")}`;
+}
+
+function generateTimeSlots(operatingHour: OperatingHour | null): string[] {
+  if (!operatingHour || operatingHour.isClosed) {
+    return [];
+  }
+
+  const openMinutes = timeToMinutes(operatingHour.openTime);
+  const closeMinutes = timeToMinutes(operatingHour.closeTime);
+
+  const slots: string[] = [];
+
+  for (
+    let currentMinutes = openMinutes;
+    currentMinutes < closeMinutes;
+    currentMinutes += 30
+  ) {
+    slots.push(minutesToTime(currentMinutes));
+  }
+
+  return slots;
+}
+
 function isBookingTimeAllowed(
   operatingHours: OperatingHour[],
   date: string,
@@ -73,7 +110,9 @@ function isBookingTimeAllowed(
     return false;
   }
 
-  return time >= hour.openTime && time < hour.closeTime;
+  const slots = generateTimeSlots(hour);
+
+  return slots.includes(time);
 }
 
 export default function BookingPage() {
@@ -83,27 +122,20 @@ export default function BookingPage() {
   const slug = params.slug as string;
 
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+
   const [restaurantLoading, setRestaurantLoading] = useState(true);
+
   const [restaurantError, setRestaurantError] = useState("");
 
   const [guestCount, setGuestCount] = useState(2);
-  const [selectedTime, setSelectedTime] = useState("19:00");
+
+  const [selectedTime, setSelectedTime] = useState("");
+
   const [selectedTable, setSelectedTable] = useState<number | null>(null);
+
   const [selectedDate, setSelectedDate] = useState("");
 
   const [errorMessage, setErrorMessage] = useState("");
-
-  const timeSlots = [
-    "17:00",
-    "17:30",
-    "18:00",
-    "18:30",
-    "19:00",
-    "19:30",
-    "20:00",
-    "20:30",
-    "21:00",
-  ];
 
   useEffect(() => {
     async function fetchRestaurant() {
@@ -162,6 +194,10 @@ export default function BookingPage() {
     );
   }, [restaurant, selectedDate]);
 
+  const timeSlots = useMemo(() => {
+    return generateTimeSlots(selectedOperatingHour);
+  }, [selectedOperatingHour]);
+
   const selectedDateIsClosed = Boolean(
     selectedOperatingHour?.isClosed || (selectedDate && !selectedOperatingHour),
   );
@@ -184,6 +220,7 @@ export default function BookingPage() {
     setErrorMessage("");
 
     if (!restaurant || !date) {
+      setSelectedTime("");
       return;
     }
 
@@ -194,14 +231,33 @@ export default function BookingPage() {
     );
 
     if (!hour || hour.isClosed) {
+      setSelectedTime("");
+
       setErrorMessage(
-        `Restoran tutup pada hari ${dayNames[dayOfWeek - 1]}. Silakan pilih tanggal lain.`,
+        `Restoran tutup pada hari ${
+          dayNames[dayOfWeek - 1]
+        }. Silakan pilih tanggal lain.`,
       );
+
       return;
     }
 
-    if (selectedTime < hour.openTime || selectedTime >= hour.closeTime) {
-      setSelectedTime(hour.openTime);
+    const slots = generateTimeSlots(hour);
+
+    if (slots.length === 0) {
+      setSelectedTime("");
+
+      setErrorMessage(
+        `Tidak ada waktu booking yang tersedia pada hari ${
+          dayNames[dayOfWeek - 1]
+        }.`,
+      );
+
+      return;
+    }
+
+    if (!slots.includes(selectedTime)) {
+      setSelectedTime(slots[0]);
     }
   };
 
@@ -231,7 +287,7 @@ export default function BookingPage() {
         setErrorMessage(`Restoran tutup pada hari ${dayNames[dayOfWeek - 1]}.`);
       } else {
         setErrorMessage(
-          `Waktu booking harus berada di antara ${hour.openTime} dan ${hour.closeTime} WIB.`,
+          `Waktu booking tersedia mulai ${hour.openTime} sampai sebelum ${hour.closeTime} WIB.`,
         );
       }
     }
@@ -251,8 +307,11 @@ export default function BookingPage() {
       const dayOfWeek = getIndonesiaDayOfWeek(selectedDate);
 
       setErrorMessage(
-        `Restoran tutup pada hari ${dayNames[dayOfWeek - 1]}. Silakan pilih tanggal lain.`,
+        `Restoran tutup pada hari ${
+          dayNames[dayOfWeek - 1]
+        }. Silakan pilih tanggal lain.`,
       );
+
       return;
     }
 
@@ -346,6 +405,7 @@ export default function BookingPage() {
 
         <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_400px]">
           <div className="space-y-6">
+            {/* TANGGAL */}
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-3">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-sm font-bold text-white">
@@ -391,6 +451,7 @@ export default function BookingPage() {
               )}
             </div>
 
+            {/* WAKTU */}
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-3">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-sm font-bold text-white">
@@ -402,43 +463,56 @@ export default function BookingPage() {
                 </h2>
               </div>
 
-              <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-4">
-                {timeSlots.map((time) => {
-                  const allowed =
-                    !selectedDate ||
-                    isBookingTimeAllowed(
+              {!selectedDate ? (
+                <div className="mt-5 rounded-xl bg-gray-50 px-4 py-5 text-center">
+                  <p className="text-sm text-gray-500">
+                    Pilih tanggal terlebih dahulu untuk melihat waktu booking.
+                  </p>
+                </div>
+              ) : selectedDateIsClosed ? (
+                <div className="mt-5 rounded-xl bg-red-50 px-4 py-5 text-center">
+                  <p className="text-sm font-medium text-red-500">
+                    Restoran tutup pada tanggal yang dipilih.
+                  </p>
+                </div>
+              ) : timeSlots.length === 0 ? (
+                <div className="mt-5 rounded-xl bg-gray-50 px-4 py-5 text-center">
+                  <p className="text-sm text-gray-500">
+                    Tidak ada waktu booking yang tersedia.
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-4">
+                  {timeSlots.map((time) => {
+                    const allowed = isBookingTimeAllowed(
                       restaurant.operatingHours,
                       selectedDate,
                       time,
                     );
 
-                  return (
-                    <button
-                      key={time}
-                      type="button"
-                      disabled={!allowed}
-                      onClick={() => handleTimeChange(time)}
-                      className={`rounded-xl border px-4 py-3 text-sm font-medium transition ${
-                        !allowed
-                          ? "cursor-not-allowed border-gray-100 bg-gray-100 text-gray-300"
-                          : selectedTime === time
-                            ? "border-green-500 bg-green-500 text-white shadow-sm"
-                            : "border-gray-200 bg-white text-gray-700 hover:border-green-300 hover:bg-green-50"
-                      }`}
-                    >
-                      {time}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {selectedDateIsClosed && (
-                <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-center text-sm font-medium text-red-500">
-                  Restoran tutup pada tanggal yang dipilih.
-                </p>
+                    return (
+                      <button
+                        key={time}
+                        type="button"
+                        disabled={!allowed}
+                        onClick={() => handleTimeChange(time)}
+                        className={`rounded-xl border px-4 py-3 text-sm font-medium transition ${
+                          !allowed
+                            ? "cursor-not-allowed border-gray-100 bg-gray-100 text-gray-300"
+                            : selectedTime === time
+                              ? "border-green-500 bg-green-500 text-white shadow-sm"
+                              : "border-gray-200 bg-white text-gray-700 hover:border-green-300 hover:bg-green-50"
+                        }`}
+                      >
+                        {time}
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             </div>
 
+            {/* JUMLAH ORANG */}
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-3">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-sm font-bold text-white">
@@ -483,6 +557,7 @@ export default function BookingPage() {
               </div>
             </div>
 
+            {/* RINGKASAN */}
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="flex items-start justify-between gap-6">
                 <div>
@@ -513,7 +588,7 @@ export default function BookingPage() {
                   <p className="text-xs text-gray-500">Waktu</p>
 
                   <p className="mt-1 text-sm font-medium text-green-600">
-                    {selectedTime}
+                    {selectedTime || "Pilih waktu"}
                   </p>
                 </div>
 
@@ -560,6 +635,7 @@ export default function BookingPage() {
             </div>
           </div>
 
+          {/* TABLE SELECTOR */}
           <aside className="lg:sticky lg:top-6">
             <TableSelector
               slug={slug}
