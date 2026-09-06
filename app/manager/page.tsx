@@ -145,6 +145,7 @@ export default function ManagerPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [totalTables, setTotalTables] = useState(0);
   const [selectedDate, setSelectedDate] = useState(getTodayDate());
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -287,16 +288,12 @@ export default function ManagerPage() {
   const statistics = useMemo(() => {
     return {
       total: bookings.length,
-
       pending: bookings.filter((booking) => booking.status === "PENDING")
         .length,
-
       confirmed: bookings.filter((booking) => booking.status === "CONFIRMED")
         .length,
-
       completed: bookings.filter((booking) => booking.status === "COMPLETED")
         .length,
-
       cancelled: bookings.filter((booking) => booking.status === "CANCELLED")
         .length,
     };
@@ -373,7 +370,7 @@ export default function ManagerPage() {
         </div>
 
         {/* DASHBOARD CARDS */}
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {/* KELOLA MEJA */}
           <Link
             href="/manager/tables"
@@ -445,7 +442,31 @@ export default function ManagerPage() {
             </p>
           </button>
 
-          {/* PENDING */}
+          {/* ATUR JAM BUKA */}
+          <Link
+            href="/manager/operating-hours"
+            className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-green-200 hover:shadow-md"
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">
+                  Atur Jam Buka
+                </p>
+
+                <p className="mt-2 text-3xl font-bold text-gray-900">🕐</p>
+              </div>
+
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-xl">
+                ⚙️
+              </div>
+            </div>
+
+            <p className="mt-4 text-sm font-semibold text-green-600 group-hover:text-green-700">
+              Atur jam operasional →
+            </p>
+          </Link>
+
+          {/* MENUNGGU KONFIRMASI */}
           <button
             type="button"
             onClick={scrollToBookings}
@@ -521,7 +542,6 @@ export default function ManagerPage() {
 
           {/* BOOKING SUMMARY */}
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {/* MENUNGGU */}
             <div className="rounded-xl border border-gray-200 bg-white p-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                 Menunggu
@@ -532,7 +552,6 @@ export default function ManagerPage() {
               </p>
             </div>
 
-            {/* DIKONFIRMASI */}
             <div className="rounded-xl border border-gray-200 bg-white p-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                 Dikonfirmasi
@@ -543,7 +562,6 @@ export default function ManagerPage() {
               </p>
             </div>
 
-            {/* SELESAI */}
             <div className="rounded-xl border border-gray-200 bg-white p-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                 Selesai
@@ -554,7 +572,6 @@ export default function ManagerPage() {
               </p>
             </div>
 
-            {/* DIBATALKAN */}
             <div className="rounded-xl border border-gray-200 bg-white p-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                 Dibatalkan
@@ -607,7 +624,6 @@ export default function ManagerPage() {
 
                           <p className="mt-1 text-sm text-gray-500">
                             {booking.user.email}
-
                             {booking.user.phone
                               ? ` · ${booking.user.phone}`
                               : ""}
@@ -682,8 +698,6 @@ export default function ManagerPage() {
                       )}
 
                       {/* ACTIONS */}
-
-                      {/* PENDING */}
                       {booking.status === "PENDING" && (
                         <div className="mt-6 flex flex-col gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:justify-end">
                           <button
