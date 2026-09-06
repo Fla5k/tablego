@@ -45,12 +45,30 @@ model Restaurant {
 
   bookings Booking[]
   tables   RestaurantTable[]
-  parent   Restaurant?       @relation("RestaurantBranches", fields: [parentId], references: [id])
-  branches Restaurant[]      @relation("RestaurantBranches")
-  managers User[]            @relation("RestaurantManagers")
+
+  parent   Restaurant?  @relation("RestaurantBranches", fields: [parentId], references: [id])
+  branches Restaurant[] @relation("RestaurantBranches")
+  managers User[]       @relation("RestaurantManagers")
+
+  operatingHours RestaurantOperatingHour[]
 
   @@index([parentId])
   @@map("restaurants")
+}
+
+model RestaurantOperatingHour {
+  id           Int     @id @default(autoincrement())
+  restaurantId Int
+  dayOfWeek    Int
+  openTime     String
+  closeTime    String
+  isClosed     Boolean @default(false)
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([restaurantId, dayOfWeek])
+  @@index([restaurantId])
+  @@map("restaurant_operating_hours")
 }
 
 model RestaurantTable {
