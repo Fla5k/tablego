@@ -178,6 +178,15 @@ export default function AdminNavbar() {
                         </div>
                       </div>
                     </div>
+
+                    {/* EDIT PROFILE */}
+                    <Link
+                      href="/profile/edit"
+                      onClick={() => setProfileOpen(false)}
+                      className="mt-3 flex w-full items-center justify-center rounded-xl bg-gray-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
+                    >
+                      Edit Profil
+                    </Link>
                   </div>
                 </div>
               )}

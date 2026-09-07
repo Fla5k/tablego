@@ -200,6 +200,18 @@ export default function UserNavbar() {
                   </div>
                 </div>
 
+                {/* EDIT PROFILE */}
+
+                <div className="border-b border-gray-100 px-5 py-3">
+                  <Link
+                    href="/profile/edit"
+                    onClick={() => setIsUserMenuOpen(false)}
+                    className="flex w-full items-center justify-center rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"
+                  >
+                    Edit Profil
+                  </Link>
+                </div>
+
                 {/* PROFILE DETAILS */}
 
                 <div className="px-5 py-4">

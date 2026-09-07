@@ -199,6 +199,18 @@ export default function ManagerNavbar() {
                         </div>
                       </div>
                     </div>
+
+                    {/* PROFILE ACTIONS */}
+                    <div className="mt-3 space-y-2">
+                      <Link
+                        href="/profile/edit"
+                        onClick={() => setProfileOpen(false)}
+                        className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-green-200 hover:bg-green-50 hover:text-green-700"
+                      >
+                        <span>Edit Profil</span>
+                        <span aria-hidden="true">→</span>
+                      </Link>
+                    </div>
                   </div>
                 </div>
               )}
