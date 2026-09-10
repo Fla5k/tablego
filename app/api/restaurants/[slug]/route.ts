@@ -27,6 +27,9 @@ export async function GET(
                   in: ["PENDING", "CONFIRMED"],
                 },
               },
+              orderBy: {
+                bookingDate: "desc",
+              },
             },
           },
         },
@@ -47,6 +50,10 @@ export async function GET(
         { status: 404 },
       );
     }
+
+    // =========================================================
+    // VALIDASI DATE / TIME
+    // =========================================================
 
     if ((date && !time) || (!date && time)) {
       return NextResponse.json(
@@ -87,6 +94,25 @@ export async function GET(
       }
     }
 
+    // =========================================================
+    // CEK KETERSEDIAAN MEJA
+    //
+    // Booking aktif:
+    // PENDING / CONFIRMED
+    //
+    // Jika T1 dibooking 15:00:
+    //
+    // 15:00 -> tidak tersedia
+    // 15:30 -> tidak tersedia
+    // 16:00 -> tidak tersedia
+    // dst.
+    //
+    // Sampai booking menjadi:
+    // COMPLETED / CANCELLED / EXPIRED
+    //
+    // Booking di masa depan tidak memblokir waktu sebelumnya.
+    // =========================================================
+
     const tables = restaurant.tables.map((table) => {
       let available = true;
 
@@ -94,7 +120,7 @@ export async function GET(
         available = !table.bookings.some((booking) => {
           const bookingTime = new Date(booking.bookingDate);
 
-          return bookingTime.getTime() === selectedDateTime!.getTime();
+          return bookingTime.getTime() <= selectedDateTime!.getTime();
         });
       }
 

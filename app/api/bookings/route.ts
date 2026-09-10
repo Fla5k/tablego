@@ -175,17 +175,23 @@ export async function POST(request: Request) {
         }
 
         // -----------------------------------------------------
-        // CEK SPAM BOOKING USER
+        // CEK BOOKING AKTIF USER
         //
         // Satu user hanya boleh memiliki satu booking aktif
-        // pada restoran dan tanggal/waktu tersebut.
+        // di satu restoran.
+        //
+        // Booking aktif:
+        // - PENDING
+        // - CONFIRMED
+        //
+        // Setelah COMPLETED / CANCELLED / EXPIRED,
+        // user boleh melakukan booking kembali.
         // -----------------------------------------------------
 
         const existingUserBooking = await tx.booking.findFirst({
           where: {
             userId: user.id,
             restaurantId,
-            bookingDate: parsedBookingDate,
             status: {
               in: ["PENDING", "CONFIRMED"],
             },
@@ -194,6 +200,9 @@ export async function POST(request: Request) {
             id: true,
             bookingDate: true,
             status: true,
+          },
+          orderBy: {
+            bookingDate: "asc",
           },
         });
 
@@ -202,14 +211,32 @@ export async function POST(request: Request) {
         }
 
         // -----------------------------------------------------
-        // CEK BOOKING MEJA YANG BENTROK
+        // CEK BOOKING MEJA YANG MASIH AKTIF
+        //
+        // Booking aktif akan terus memakai meja mulai dari
+        // bookingDate sampai booking tersebut selesai.
+        //
+        // Contoh:
+        //
+        // T1 booking 15:00
+        //
+        // 15:00 -> bentrok
+        // 15:30 -> bentrok
+        // 16:00 -> bentrok
+        // 17:00 -> bentrok
+        //
+        // sampai status menjadi COMPLETED / CANCELLED / EXPIRED.
+        //
+        // Booking di masa depan tidak memblokir waktu sebelumnya.
         // -----------------------------------------------------
 
         const existingBooking = await tx.booking.findFirst({
           where: {
             restaurantId,
             tableId,
-            bookingDate: parsedBookingDate,
+            bookingDate: {
+              lte: parsedBookingDate,
+            },
             status: {
               in: ["PENDING", "CONFIRMED"],
             },
@@ -218,6 +245,9 @@ export async function POST(request: Request) {
             id: true,
             bookingDate: true,
             status: true,
+          },
+          orderBy: {
+            bookingDate: "desc",
           },
         });
 
@@ -311,8 +341,7 @@ export async function POST(request: Request) {
           return NextResponse.json(
             {
               success: false,
-              message:
-                "Meja tidak ditemukan di restoran tersebut.",
+              message: "Meja tidak ditemukan di restoran tersebut.",
             },
             { status: 404 },
           );
@@ -321,8 +350,7 @@ export async function POST(request: Request) {
           return NextResponse.json(
             {
               success: false,
-              message:
-                "Jumlah tamu melebihi kapasitas meja.",
+              message: "Jumlah tamu melebihi kapasitas meja.",
             },
             { status: 400 },
           );
@@ -332,7 +360,7 @@ export async function POST(request: Request) {
             {
               success: false,
               message:
-                "Kamu sudah memiliki booking di restoran ini pada tanggal tersebut.",
+                "Kamu masih memiliki booking aktif di restoran ini. Selesaikan booking sebelumnya terlebih dahulu sebelum melakukan booking baru.",
             },
             { status: 409 },
           );
@@ -342,7 +370,7 @@ export async function POST(request: Request) {
             {
               success: false,
               message:
-                "Meja tersebut sudah dibooking pada waktu tersebut.",
+                "Meja tersebut masih digunakan oleh booking sebelumnya. Silakan pilih meja lain.",
             },
             { status: 409 },
           );
