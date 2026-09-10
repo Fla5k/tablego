@@ -36,6 +36,34 @@ const dayNames = [
   "Minggu",
 ];
 
+function getIndonesiaDateTime() {
+  const now = new Date();
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+
+  const getPart = (type: string) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+
+  const year = getPart("year");
+  const month = getPart("month");
+  const day = getPart("day");
+  const hour = Number(getPart("hour"));
+  const minute = Number(getPart("minute"));
+
+  return {
+    date: `${year}-${month}-${day}`,
+    minutes: hour * 60 + minute,
+  };
+}
+
 function getIndonesiaDayOfWeek(dateString: string): number {
   const date = new Date(`${dateString}T12:00:00+07:00`);
 
@@ -97,6 +125,8 @@ function isBookingTimeAllowed(
   operatingHours: OperatingHour[],
   date: string,
   time: string,
+  todayDate: string,
+  currentTimeMinutes: number,
 ): boolean {
   if (!date || !time) {
     return false;
@@ -112,7 +142,21 @@ function isBookingTimeAllowed(
 
   const slots = generateTimeSlots(hour);
 
-  return slots.includes(time);
+  if (!slots.includes(time)) {
+    return false;
+  }
+
+  // Kalau booking untuk hari ini,
+  // waktu yang sudah lewat tidak boleh dipilih.
+  if (date === todayDate) {
+    const bookingTimeMinutes = timeToMinutes(time);
+
+    if (bookingTimeMinutes < currentTimeMinutes) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 export default function BookingPage() {
@@ -136,6 +180,24 @@ export default function BookingPage() {
   const [selectedDate, setSelectedDate] = useState("");
 
   const [errorMessage, setErrorMessage] = useState("");
+
+  const [currentDateTime, setCurrentDateTime] = useState(
+    getIndonesiaDateTime(),
+  );
+
+  useEffect(() => {
+    const updateCurrentDateTime = () => {
+      setCurrentDateTime(getIndonesiaDateTime());
+    };
+
+    updateCurrentDateTime();
+
+    const interval = window.setInterval(updateCurrentDateTime, 30_000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     async function fetchRestaurant() {
@@ -172,14 +234,9 @@ export default function BookingPage() {
     }
   }, [slug]);
 
-  const todayDate = useMemo(() => {
-    return new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Jakarta",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(new Date());
-  }, []);
+  const todayDate = currentDateTime.date;
+
+  const currentTimeMinutes = currentDateTime.minutes;
 
   const selectedOperatingHour = useMemo(() => {
     if (!restaurant || !selectedDate) {
@@ -195,8 +252,16 @@ export default function BookingPage() {
   }, [restaurant, selectedDate]);
 
   const timeSlots = useMemo(() => {
-    return generateTimeSlots(selectedOperatingHour);
-  }, [selectedOperatingHour]);
+    const slots = generateTimeSlots(selectedOperatingHour);
+
+    // Untuk tanggal hari ini, hanya tampilkan waktu yang
+    // belum terlewat.
+    if (selectedDate === todayDate) {
+      return slots.filter((time) => timeToMinutes(time) >= currentTimeMinutes);
+    }
+
+    return slots;
+  }, [selectedOperatingHour, selectedDate, todayDate, currentTimeMinutes]);
 
   const selectedDateIsClosed = Boolean(
     selectedOperatingHour?.isClosed || (selectedDate && !selectedOperatingHour),
@@ -211,8 +276,10 @@ export default function BookingPage() {
       restaurant.operatingHours,
       selectedDate,
       selectedTime,
+      todayDate,
+      currentTimeMinutes,
     );
-  }, [restaurant, selectedDate, selectedTime]);
+  }, [restaurant, selectedDate, selectedTime, todayDate, currentTimeMinutes]);
 
   const handleDateChange = (date: string) => {
     setSelectedDate(date);
@@ -242,22 +309,34 @@ export default function BookingPage() {
       return;
     }
 
-    const slots = generateTimeSlots(hour);
+    const allSlots = generateTimeSlots(hour);
 
-    if (slots.length === 0) {
+    // Untuk hari ini, buang slot yang sudah lewat.
+    const availableSlots =
+      date === todayDate
+        ? allSlots.filter((time) => timeToMinutes(time) >= currentTimeMinutes)
+        : allSlots;
+
+    if (availableSlots.length === 0) {
       setSelectedTime("");
 
-      setErrorMessage(
-        `Tidak ada waktu booking yang tersedia pada hari ${
-          dayNames[dayOfWeek - 1]
-        }.`,
-      );
+      if (date === todayDate) {
+        setErrorMessage(
+          `Tidak ada waktu booking yang tersedia lagi untuk hari ini.`,
+        );
+      } else {
+        setErrorMessage(
+          `Tidak ada waktu booking yang tersedia pada hari ${
+            dayNames[dayOfWeek - 1]
+          }.`,
+        );
+      }
 
       return;
     }
 
-    if (!slots.includes(selectedTime)) {
-      setSelectedTime(slots[0]);
+    if (!availableSlots.includes(selectedTime)) {
+      setSelectedTime(availableSlots[0]);
     }
   };
 
@@ -274,6 +353,8 @@ export default function BookingPage() {
       restaurant.operatingHours,
       selectedDate,
       time,
+      todayDate,
+      currentTimeMinutes,
     );
 
     if (!allowed) {
@@ -285,6 +366,10 @@ export default function BookingPage() {
 
       if (!hour || hour.isClosed) {
         setErrorMessage(`Restoran tutup pada hari ${dayNames[dayOfWeek - 1]}.`);
+      } else if (selectedDate === todayDate) {
+        setErrorMessage(
+          "Waktu booking tersebut sudah lewat. Silakan pilih waktu yang masih tersedia.",
+        );
       } else {
         setErrorMessage(
           `Waktu booking tersedia mulai ${hour.openTime} sampai sebelum ${hour.closeTime} WIB.`,
@@ -318,7 +403,11 @@ export default function BookingPage() {
     if (!selectedTimeIsAllowed) {
       const hour = selectedOperatingHour;
 
-      if (hour && !hour.isClosed) {
+      if (selectedDate === todayDate) {
+        setErrorMessage(
+          "Waktu booking tersebut sudah lewat atau tidak tersedia. Silakan pilih waktu yang masih tersedia.",
+        );
+      } else if (hour && !hour.isClosed) {
         setErrorMessage(
           `Waktu booking hanya tersedia ${hour.openTime}–${hour.closeTime} WIB.`,
         );
@@ -478,7 +567,9 @@ export default function BookingPage() {
               ) : timeSlots.length === 0 ? (
                 <div className="mt-5 rounded-xl bg-gray-50 px-4 py-5 text-center">
                   <p className="text-sm text-gray-500">
-                    Tidak ada waktu booking yang tersedia.
+                    {selectedDate === todayDate
+                      ? "Tidak ada waktu booking yang tersedia lagi untuk hari ini."
+                      : "Tidak ada waktu booking yang tersedia."}
                   </p>
                 </div>
               ) : (
@@ -488,6 +579,8 @@ export default function BookingPage() {
                       restaurant.operatingHours,
                       selectedDate,
                       time,
+                      todayDate,
+                      currentTimeMinutes,
                     );
 
                     return (
