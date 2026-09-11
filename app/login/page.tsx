@@ -66,7 +66,9 @@ export default function LoginPage() {
        * MANAGER → Dashboard Manager
        * CUSTOMER → Halaman restoran untuk booking
        */
-      if (data.user?.role === "ADMIN") {
+      if (data.user?.role === "OWNER") {
+        router.push("/owner");
+      } else if (data.user?.role === "ADMIN") {
         router.push("/admin");
       } else if (data.user?.role === "MANAGER") {
         router.push("/manager");

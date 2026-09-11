@@ -74,6 +74,16 @@ export async function getCurrentAdmin() {
   return user;
 }
 
+export async function getCurrentOwner() {
+  const user = await getCurrentUser();
+
+  if (!user || user.role !== "OWNER") {
+    return null;
+  }
+
+  return user;
+}
+
 export async function getCurrentManager() {
   const user = await getCurrentUser();
 

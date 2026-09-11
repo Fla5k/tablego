@@ -110,6 +110,7 @@ enum UserRole {
   CUSTOMER
   ADMIN
   MANAGER
+  OWNER
 }
 
 enum BookingStatus {
