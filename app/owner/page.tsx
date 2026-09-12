@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import OwnerAccountMenu from "@/components/layout/OwnerAccountMenu";
 import { getCurrentOwner } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -349,19 +350,8 @@ export default async function OwnerDashboardPage() {
             </p>
           </div>
 
-          <div className="hidden items-center gap-3 sm:flex">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-sm font-bold text-green-700">
-              {owner.name.charAt(0).toUpperCase()}
-            </div>
-
-            <div>
-              <p className="text-sm font-semibold text-gray-900">
-                {owner.name}
-              </p>
-
-              <p className="text-xs text-gray-500">Owner TableGo</p>
-            </div>
-          </div>
+          {/* HANYA BAGIAN INI YANG DIUBAH */}
+          <OwnerAccountMenu name={owner.name} />
         </div>
       </header>
 
