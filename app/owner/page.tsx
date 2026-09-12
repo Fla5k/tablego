@@ -132,7 +132,33 @@ function formatDate(date: Date) {
     day: "2-digit",
     month: "short",
     year: "numeric",
+    timeZone: "Asia/Jakarta",
   }).format(date);
+}
+
+/**
+ * Mengambil rentang awal dan akhir hari berdasarkan WIB.
+ * Database menyimpan DateTime sebagai UTC, sehingga kita
+ * membuat batas hari berdasarkan Asia/Jakarta.
+ */
+function getIndonesiaTodayRange() {
+  const now = new Date();
+
+  const indonesiaDate = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+
+  const startOfDay = new Date(`${indonesiaDate}T00:00:00+07:00`);
+  const startOfNextDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+
+  return {
+    startOfDay,
+    startOfNextDay,
+    indonesiaDate,
+  };
 }
 
 export default async function OwnerDashboardPage() {
@@ -220,9 +246,30 @@ export default async function OwnerDashboardPage() {
   const cancelledRate =
     totalBookings > 0 ? Math.round((cancelledTotal / totalBookings) * 100) : 0;
 
+  /**
+   * ACTIVITY
+   *
+   * Hanya mengambil booking yang tanggal booking-nya
+   * berada pada hari ini berdasarkan WIB.
+   *
+   * Jadi:
+   * - Booking hari ini       -> tampil
+   * - Booking besok          -> tidak tampil
+   * - Booking kemarin        -> tidak tampil
+   *
+   * Urutan berdasarkan waktu booking terbaru.
+   */
+  const { startOfDay, startOfNextDay } = getIndonesiaTodayRange();
+
   const recentBookings = await prisma.booking.findMany({
+    where: {
+      bookingDate: {
+        gte: startOfDay,
+        lt: startOfNextDay,
+      },
+    },
     orderBy: {
-      createdAt: "desc",
+      bookingDate: "asc",
     },
     take: 5,
     select: {
@@ -670,7 +717,7 @@ export default async function OwnerDashboardPage() {
           </div>
         </section>
 
-        {/* RECENT BOOKINGS */}
+        {/* TODAY ACTIVITY */}
         <section className="mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm">
           <div className="flex flex-col justify-between gap-3 border-b border-gray-100 px-6 py-5 sm:flex-row sm:items-center">
             <div>
@@ -679,16 +726,16 @@ export default async function OwnerDashboardPage() {
               </p>
 
               <h2 className="mt-1 text-xl font-bold text-gray-900">
-                Booking Terbaru
+                Booking Hari Ini
               </h2>
 
               <p className="mt-1 text-sm text-gray-500">
-                Aktivitas reservasi terbaru di seluruh restoran.
+                Aktivitas reservasi untuk hari ini di seluruh restoran.
               </p>
             </div>
 
             <span className="rounded-full bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-500">
-              5 terbaru
+              {recentBookings.length} booking hari ini
             </span>
           </div>
 
@@ -699,11 +746,11 @@ export default async function OwnerDashboardPage() {
               </div>
 
               <p className="mt-4 text-sm font-semibold text-gray-900">
-                Belum ada booking
+                Belum ada booking hari ini
               </p>
 
               <p className="mt-1 text-sm text-gray-500">
-                Aktivitas booking akan muncul di sini.
+                Aktivitas booking hari ini akan muncul di sini.
               </p>
             </div>
           ) : (
@@ -765,7 +812,7 @@ export default async function OwnerDashboardPage() {
 
                         <td className="px-6 py-4">
                           <span className="text-sm font-semibold text-gray-700">
-                            T{booking.table.tableNumber}
+                            {booking.table.tableNumber}
                           </span>
                         </td>
 

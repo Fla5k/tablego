@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import UserNavbar from "@/components/layout/UserNavbar";
 import ManagerNavbar from "@/components/layout/ManagerNavbar";
 import AdminNavbar from "@/components/layout/AdminNavbar";
+import OwnerSidebar from "@/components/layout/OwnerSidebar";
 
 type User = {
   id: number;
@@ -158,7 +159,11 @@ export default function EditProfilePage() {
     }
   }
 
-  function renderNavbar() {
+  function renderNavigation() {
+    if (user?.role === "OWNER") {
+      return <OwnerSidebar />;
+    }
+
     if (user?.role === "ADMIN") {
       return <AdminNavbar />;
     }
@@ -192,13 +197,18 @@ export default function EditProfilePage() {
     return null;
   }
 
+  const isOwner = user.role === "OWNER";
   const isManager = user.role === "MANAGER";
 
   return (
     <>
-      {renderNavbar()}
+      {renderNavigation()}
 
-      <main className="min-h-screen bg-gray-50 px-4 py-10">
+      <main
+        className={`min-h-screen bg-gray-50 px-4 py-10 ${
+          isOwner ? "lg:pl-64" : ""
+        }`}
+      >
         <div className="mx-auto max-w-3xl">
           {/* HEADER */}
           <div className="mb-8">
@@ -515,7 +525,7 @@ export default function EditProfilePage() {
             <div className="flex justify-start">
               <button
                 type="button"
-                onClick={() => router.back()}
+                onClick={() => router.push(isOwner ? "/owner" : "/")}
                 className="rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
               >
                 ← Kembali
