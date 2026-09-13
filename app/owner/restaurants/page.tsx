@@ -44,7 +44,6 @@ export default function OwnerRestaurantsPage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
   const [showAddForm, setShowAddForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
@@ -917,98 +916,150 @@ export default function OwnerRestaurantsPage() {
                   {restaurants.map((restaurant) => (
                     <div
                       key={restaurant.id}
-                      className="group rounded-2xl border border-gray-200 p-5 transition hover:border-green-200 hover:shadow-md"
+                      className="group overflow-hidden rounded-2xl border border-gray-200 bg-white transition hover:border-green-200 hover:shadow-md"
                     >
-                      <div className="flex items-start gap-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-green-50 text-green-600 transition group-hover:bg-green-100">
-                          <svg
-                            className="h-5 w-5"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                            aria-hidden="true"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M4 21V5a2 2 0 012-2h12a2 2 0 012 2v16"
+                      {/* Restaurant Image */}
+                      <div className="relative h-44 w-full overflow-hidden bg-gray-100">
+                        {restaurant.image ? (
+                          <>
+                            <img
+                              src={restaurant.image}
+                              alt={`Foto ${restaurant.name}`}
+                              className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                              onError={(event) => {
+                                event.currentTarget.style.display = "none";
+                                const fallback =
+                                  event.currentTarget.nextElementSibling;
+
+                                if (fallback instanceof HTMLElement) {
+                                  fallback.classList.remove("hidden");
+                                }
+                              }}
                             />
 
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M3 21h18"
-                            />
-
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M8 7h1M12 7h1M16 7h1M8 11h1M12 11h1M16 11h1M8 15h1M12 15h1M16 15h1"
-                            />
-                          </svg>
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <h3 className="truncate text-base font-bold text-gray-900">
-                                {restaurant.name}
-                              </h3>
-
-                              <div className="mt-2 flex items-start gap-2 text-sm text-gray-500">
-                                <svg
-                                  className="mt-0.5 h-4 w-4 shrink-0 text-gray-400"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="1.8"
-                                  aria-hidden="true"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M12 21s7-5.25 7-11a7 7 0 10-14 0c0 5.75 7 11 7 11z"
-                                  />
-
-                                  <circle cx="12" cy="10" r="2.5" />
-                                </svg>
-
-                                <span className="line-clamp-2">
-                                  {restaurant.address}
-                                </span>
-                              </div>
-                            </div>
-
-                            <span className="shrink-0 rounded-full bg-green-50 px-2.5 py-1 text-[11px] font-semibold text-green-700">
-                              Aktif
-                            </span>
-                          </div>
-
-                          <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4">
-                            <p className="text-xs text-gray-400">
-                              ID Restoran #{restaurant.id}
-                            </p>
-
-                            <Link
-                              href={`/owner/restaurants/${restaurant.id}/tables`}
-                              className="inline-flex items-center gap-1.5 text-xs font-bold text-green-600 transition hover:text-green-700"
-                            >
-                              Kelola Meja
+                            <div className="absolute inset-0 hidden items-center justify-center bg-green-50 text-green-600">
                               <svg
-                                className="h-3.5 w-3.5"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
+                                className="h-10 w-10"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
                                 aria-hidden="true"
                               >
                                 <path
-                                  fillRule="evenodd"
-                                  d="M7.21 14.77a.75.75 0 01.02-1.06L10.94 10 7.23 6.29a.75.75 0 111.06-1.06l4.24 4.24a.75.75 0 010 1.06l-4.24 4.24a.75.75 0 01-1.08 0z"
-                                  clipRule="evenodd"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M4 21V5a2 2 0 012-2h12a2 2 0 012 2v16"
+                                />
+
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M3 21h18"
+                                />
+
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M8 7h1M12 7h1M16 7h1M8 11h1M12 11h1M16 11h1M8 15h1M12 15h1M16 15h1"
                                 />
                               </svg>
-                            </Link>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-green-50 text-green-600">
+                            <svg
+                              className="h-10 w-10"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              aria-hidden="true"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M4 21V5a2 2 0 012-2h12a2 2 0 012 2v16"
+                              />
+
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M3 21h18"
+                              />
+
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M8 7h1M12 7h1M16 7h1M8 11h1M12 11h1M16 11h1M8 15h1M12 15h1M16 15h1"
+                              />
+                            </svg>
                           </div>
+                        )}
+
+                        <div className="absolute right-4 top-4">
+                          <span className="rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-green-700 shadow-sm backdrop-blur">
+                            Aktif
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Restaurant Information */}
+                      <div className="p-5">
+                        <div className="flex items-start gap-4">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="truncate text-base font-bold text-gray-900">
+                              {restaurant.name}
+                            </h3>
+
+                            <div className="mt-2 flex items-start gap-2 text-sm text-gray-500">
+                              <svg
+                                className="mt-0.5 h-4 w-4 shrink-0 text-gray-400"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                aria-hidden="true"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M12 21s7-5.25 7-11a7 7 0 10-14 0c0 5.75 7 11 7 11z"
+                                />
+
+                                <circle cx="12" cy="10" r="2.5" />
+                              </svg>
+
+                              <span className="line-clamp-2">
+                                {restaurant.address}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4">
+                          <p className="text-xs text-gray-400">
+                            ID Restoran #{restaurant.id}
+                          </p>
+
+                          <Link
+                            href={`/owner/restaurants/${restaurant.id}/tables`}
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-green-600 transition hover:text-green-700"
+                          >
+                            Kelola Meja
+                            <svg
+                              className="h-3.5 w-3.5"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                              aria-hidden="true"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M7.21 14.77a.75.75 0 01.02-1.06L10.94 10 7.23 6.29a.75.75 0 111.06-1.06l4.24 4.24a.75.75 0 010 1.06l-4.24 4.24a.75.75 0 01-1.08 0z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          </Link>
                         </div>
                       </div>
                     </div>
