@@ -44,7 +44,12 @@ export default function OwnerRestaurantsPage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [showAddForm, setShowAddForm] = useState(false);
+
+  const [showForm, setShowForm] = useState(false);
+  const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(
+    null,
+  );
+
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
@@ -109,12 +114,56 @@ export default function OwnerRestaurantsPage() {
     setOperatingHours(createDefaultOperatingHours());
     setFormError("");
     setFormSuccess("");
+    setEditingRestaurant(null);
   }
 
-  function closeAddForm() {
+  function openAddForm() {
+    resetForm();
+    setShowForm(true);
+  }
+
+  function openEditForm(restaurant: Restaurant) {
+    setEditingRestaurant(restaurant);
+
+    setForm({
+      name: restaurant.name ?? "",
+      description: restaurant.description ?? "",
+      address: restaurant.address ?? "",
+      phone: restaurant.phone ?? "",
+      image: restaurant.image ?? "",
+      parentId: restaurant.parentId ? String(restaurant.parentId) : "",
+    });
+
+    const existingHours = restaurant.operatingHours ?? [];
+
+    const mergedHours = DAY_NAMES.map((_, index) => {
+      const dayOfWeek = index + 1;
+
+      const existingHour = existingHours.find(
+        (hour) => hour.dayOfWeek === dayOfWeek,
+      );
+
+      return (
+        existingHour ?? {
+          dayOfWeek,
+          openTime: "10:00",
+          closeTime: "22:00",
+          isClosed: false,
+        }
+      );
+    });
+
+    setOperatingHours(mergedHours);
+
+    setFormError("");
+    setFormSuccess("");
+    setShowForm(true);
+  }
+
+  function closeForm() {
     if (submitting) return;
 
-    setShowAddForm(false);
+    setShowForm(false);
     resetForm();
   }
 
@@ -135,16 +184,24 @@ export default function OwnerRestaurantsPage() {
     );
   }
 
-  async function handleAddRestaurant(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setSubmitting(true);
     setFormError("");
     setFormSuccess("");
 
+    const isEdit = Boolean(editingRestaurant);
+
     try {
-      const response = await fetch("/api/owner/restaurants", {
-        method: "POST",
+      const url = isEdit
+        ? `/api/owner/restaurants/${editingRestaurant?.id}`
+        : "/api/owner/restaurants";
+
+      const method = isEdit ? "PATCH" : "POST";
+
+      const response = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
         },
@@ -162,28 +219,54 @@ export default function OwnerRestaurantsPage() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.message || "Gagal menambahkan restoran.");
-      }
-
-      setFormSuccess("Restoran berhasil ditambahkan.");
-
-      if (data.restaurant) {
-        setRestaurants((current) =>
-          [...current, data.restaurant].sort((a, b) =>
-            a.name.localeCompare(b.name),
-          ),
+        throw new Error(
+          data.message ||
+            (isEdit
+              ? "Gagal memperbarui restoran."
+              : "Gagal menambahkan restoran."),
         );
       }
 
+      if (data.restaurant) {
+        setRestaurants((current) => {
+          if (isEdit) {
+            return current
+              .map((restaurant) =>
+                restaurant.id === data.restaurant.id
+                  ? data.restaurant
+                  : restaurant,
+              )
+              .sort((a, b) => a.name.localeCompare(b.name));
+          }
+
+          return [...current, data.restaurant].sort((a, b) =>
+            a.name.localeCompare(b.name),
+          );
+        });
+      }
+
+      setFormSuccess(
+        isEdit
+          ? "Restoran berhasil diperbarui."
+          : "Restoran berhasil ditambahkan.",
+      );
+
       setTimeout(() => {
-        setShowAddForm(false);
+        setShowForm(false);
         resetForm();
       }, 700);
     } catch (error) {
-      console.error("Add owner restaurant error:", error);
+      console.error(
+        isEdit ? "Edit owner restaurant error:" : "Add owner restaurant error:",
+        error,
+      );
 
       setFormError(
-        error instanceof Error ? error.message : "Gagal menambahkan restoran.",
+        error instanceof Error
+          ? error.message
+          : isEdit
+            ? "Gagal memperbarui restoran."
+            : "Gagal menambahkan restoran.",
       );
     } finally {
       setSubmitting(false);
@@ -212,10 +295,7 @@ export default function OwnerRestaurantsPage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => {
-                resetForm();
-                setShowAddForm(true);
-              }}
+              onClick={openAddForm}
               className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
             >
               <svg
@@ -250,11 +330,13 @@ export default function OwnerRestaurantsPage() {
                     strokeLinejoin="round"
                     d="M4 21V5a2 2 0 012-2h12a2 2 0 012 2v16"
                   />
+
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     d="M3 21h18"
                   />
+
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -275,8 +357,8 @@ export default function OwnerRestaurantsPage() {
         </div>
       </header>
 
-      {/* Add Restaurant Modal */}
-      {showAddForm && (
+      {/* Add / Edit Restaurant Modal */}
+      {showForm && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:p-6">
           <div className="my-4 w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl sm:my-8">
             <div className="flex items-center justify-between border-b border-gray-200 px-6 py-5">
@@ -286,17 +368,19 @@ export default function OwnerRestaurantsPage() {
                 </p>
 
                 <h2 className="mt-1 text-xl font-bold text-gray-900">
-                  Tambah Restoran
+                  {editingRestaurant ? "Edit Restoran" : "Tambah Restoran"}
                 </h2>
 
                 <p className="mt-1 text-sm text-gray-500">
-                  Tambahkan restoran baru ke platform TableGo.
+                  {editingRestaurant
+                    ? "Perbarui informasi restoran dan jam operasional."
+                    : "Tambahkan restoran baru ke platform TableGo."}
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={closeAddForm}
+                onClick={closeForm}
                 disabled={submitting}
                 className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Tutup"
@@ -318,7 +402,7 @@ export default function OwnerRestaurantsPage() {
               </button>
             </div>
 
-            <form onSubmit={handleAddRestaurant}>
+            <form onSubmit={handleSubmit}>
               <div className="max-h-[70vh] overflow-y-auto px-6 py-6">
                 {formError && (
                   <div className="mb-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -344,6 +428,7 @@ export default function OwnerRestaurantsPage() {
                 </div>
 
                 <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                  {/* Name */}
                   <div className="sm:col-span-2">
                     <label
                       htmlFor="restaurant-name"
@@ -369,6 +454,7 @@ export default function OwnerRestaurantsPage() {
                     />
                   </div>
 
+                  {/* Description */}
                   <div className="sm:col-span-2">
                     <label
                       htmlFor="restaurant-description"
@@ -393,6 +479,7 @@ export default function OwnerRestaurantsPage() {
                     />
                   </div>
 
+                  {/* Address */}
                   <div className="sm:col-span-2">
                     <label
                       htmlFor="restaurant-address"
@@ -418,6 +505,7 @@ export default function OwnerRestaurantsPage() {
                     />
                   </div>
 
+                  {/* Phone */}
                   <div>
                     <label
                       htmlFor="restaurant-phone"
@@ -442,6 +530,7 @@ export default function OwnerRestaurantsPage() {
                     />
                   </div>
 
+                  {/* Parent Restaurant */}
                   <div>
                     <label
                       htmlFor="restaurant-parent"
@@ -467,7 +556,11 @@ export default function OwnerRestaurantsPage() {
                       </option>
 
                       {restaurants
-                        .filter((restaurant) => !restaurant.parentId)
+                        .filter(
+                          (restaurant) =>
+                            !restaurant.parentId &&
+                            restaurant.id !== editingRestaurant?.id,
+                        )
                         .map((restaurant) => (
                           <option key={restaurant.id} value={restaurant.id}>
                             {restaurant.name}
@@ -476,6 +569,7 @@ export default function OwnerRestaurantsPage() {
                     </select>
                   </div>
 
+                  {/* Image */}
                   <div className="sm:col-span-2">
                     <label
                       htmlFor="restaurant-image"
@@ -500,9 +594,21 @@ export default function OwnerRestaurantsPage() {
                     />
 
                     <p className="mt-2 text-xs text-gray-400">
-                      Masukkan URL gambar publik seperti yang digunakan pada
-                      form Admin.
+                      Masukkan URL gambar publik restoran.
                     </p>
+
+                    {form.image && (
+                      <div className="mt-3 overflow-hidden rounded-xl border border-gray-200">
+                        <img
+                          src={form.image}
+                          alt="Preview restoran"
+                          className="h-40 w-full object-cover"
+                          onError={(event) => {
+                            event.currentTarget.style.display = "none";
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -621,7 +727,7 @@ export default function OwnerRestaurantsPage() {
               <div className="flex flex-col-reverse gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4 sm:flex-row sm:justify-end">
                 <button
                   type="button"
-                  onClick={closeAddForm}
+                  onClick={closeForm}
                   disabled={submitting}
                   className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -660,6 +766,8 @@ export default function OwnerRestaurantsPage() {
                       </svg>
                       Menyimpan...
                     </>
+                  ) : editingRestaurant ? (
+                    "Simpan Perubahan"
                   ) : (
                     "Tambah Restoran"
                   )}
@@ -828,7 +936,9 @@ export default function OwnerRestaurantsPage() {
 
                         <div className="flex-1">
                           <div className="h-4 w-2/3 rounded bg-gray-100" />
+
                           <div className="mt-3 h-3 w-full rounded bg-gray-100" />
+
                           <div className="mt-2 h-3 w-1/2 rounded bg-gray-100" />
                         </div>
                       </div>
@@ -928,11 +1038,13 @@ export default function OwnerRestaurantsPage() {
                               className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
                               onError={(event) => {
                                 event.currentTarget.style.display = "none";
+
                                 const fallback =
                                   event.currentTarget.nextElementSibling;
 
                                 if (fallback instanceof HTMLElement) {
                                   fallback.classList.remove("hidden");
+                                  fallback.classList.add("flex");
                                 }
                               }}
                             />
@@ -1042,24 +1154,44 @@ export default function OwnerRestaurantsPage() {
                             ID Restoran #{restaurant.id}
                           </p>
 
-                          <Link
-                            href={`/owner/restaurants/${restaurant.id}/tables`}
-                            className="inline-flex items-center gap-1.5 text-xs font-bold text-green-600 transition hover:text-green-700"
-                          >
-                            Kelola Meja
-                            <svg
-                              className="h-3.5 w-3.5"
-                              viewBox="0 0 20 20"
-                              fill="currentColor"
-                              aria-hidden="true"
+                          <div className="flex items-center gap-4">
+                            {/* Edit */}
+                            <button
+                              type="button"
+                              onClick={() => openEditForm(restaurant)}
+                              className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-600 transition hover:text-gray-900"
                             >
-                              <path
-                                fillRule="evenodd"
-                                d="M7.21 14.77a.75.75 0 01.02-1.06L10.94 10 7.23 6.29a.75.75 0 111.06-1.06l4.24 4.24a.75.75 0 010 1.06l-4.24 4.24a.75.75 0 01-1.08 0z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          </Link>
+                              <svg
+                                className="h-3.5 w-3.5"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                                aria-hidden="true"
+                              >
+                                <path d="M13.586 3.586a2 2 0 012.828 2.828l-8.5 8.5a1 1 0 01-.466.263l-3.5 1a1 1 0 01-1.237-1.237l1-3.5a1 1 0 01.263-.466l8.5-8.5z" />
+                              </svg>
+                              Edit
+                            </button>
+
+                            {/* Manage Tables */}
+                            <Link
+                              href={`/owner/restaurants/${restaurant.id}/tables`}
+                              className="inline-flex items-center gap-1.5 text-xs font-bold text-green-600 transition hover:text-green-700"
+                            >
+                              Kelola Meja
+                              <svg
+                                className="h-3.5 w-3.5"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                                aria-hidden="true"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M7.21 14.77a.75.75 0 01.02-1.06L10.94 10 7.23 6.29a.75.75 0 111.06-1.06l4.24 4.24a.75.75 0 010 1.06l-4.24 4.24a.75.75 0 01-1.08 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            </Link>
+                          </div>
                         </div>
                       </div>
                     </div>
