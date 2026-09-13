@@ -3,56 +3,199 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+type OperatingHour = {
+  dayOfWeek: number;
+  openTime: string;
+  closeTime: string;
+  isClosed: boolean;
+};
+
 type Restaurant = {
   id: number;
   name: string;
   address: string;
+  description?: string | null;
+  phone?: string | null;
+  image?: string | null;
+  parentId?: number | null;
+  operatingHours?: OperatingHour[];
 };
+
+const DAY_NAMES = [
+  "Senin",
+  "Selasa",
+  "Rabu",
+  "Kamis",
+  "Jumat",
+  "Sabtu",
+  "Minggu",
+];
+
+function createDefaultOperatingHours(): OperatingHour[] {
+  return DAY_NAMES.map((_, index) => ({
+    dayOfWeek: index + 1,
+    openTime: "10:00",
+    closeTime: "22:00",
+    isClosed: false,
+  }));
+}
 
 export default function OwnerRestaurantsPage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    async function fetchRestaurants() {
-      try {
-        setLoading(true);
-        setError("");
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [formSuccess, setFormSuccess] = useState("");
 
-        const response = await fetch("/api/owner/restaurants", {
-          method: "GET",
-          cache: "no-store",
-        });
+  const [form, setForm] = useState({
+    name: "",
+    description: "",
+    address: "",
+    phone: "",
+    image: "",
+    parentId: "",
+  });
 
-        const data = await response.json();
+  const [operatingHours, setOperatingHours] = useState<OperatingHour[]>(
+    createDefaultOperatingHours(),
+  );
 
-        if (!response.ok || !data.success) {
-          throw new Error(data.message || "Gagal mengambil data restoran.");
-        }
+  async function fetchRestaurants() {
+    try {
+      setLoading(true);
+      setError("");
 
-        setRestaurants(data.restaurants ?? []);
-      } catch (error) {
-        console.error("Owner restaurants page error:", error);
+      const response = await fetch("/api/owner/restaurants", {
+        method: "GET",
+        cache: "no-store",
+      });
 
-        setError(
-          error instanceof Error
-            ? error.message
-            : "Gagal mengambil data restoran.",
-        );
-      } finally {
-        setLoading(false);
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Gagal mengambil data restoran.");
       }
-    }
 
+      setRestaurants(data.restaurants ?? []);
+    } catch (error) {
+      console.error("Owner restaurants page error:", error);
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Gagal mengambil data restoran.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
     fetchRestaurants();
   }, []);
+
+  function resetForm() {
+    setForm({
+      name: "",
+      description: "",
+      address: "",
+      phone: "",
+      image: "",
+      parentId: "",
+    });
+
+    setOperatingHours(createDefaultOperatingHours());
+    setFormError("");
+    setFormSuccess("");
+  }
+
+  function closeAddForm() {
+    if (submitting) return;
+
+    setShowAddForm(false);
+    resetForm();
+  }
+
+  function updateOperatingHour(
+    dayOfWeek: number,
+    field: keyof OperatingHour,
+    value: string | boolean,
+  ) {
+    setOperatingHours((current) =>
+      current.map((hour) =>
+        hour.dayOfWeek === dayOfWeek
+          ? {
+              ...hour,
+              [field]: value,
+            }
+          : hour,
+      ),
+    );
+  }
+
+  async function handleAddRestaurant(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    setSubmitting(true);
+    setFormError("");
+    setFormSuccess("");
+
+    try {
+      const response = await fetch("/api/owner/restaurants", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: form.name,
+          description: form.description,
+          address: form.address,
+          phone: form.phone,
+          image: form.image,
+          parentId: form.parentId || null,
+          operatingHours,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Gagal menambahkan restoran.");
+      }
+
+      setFormSuccess("Restoran berhasil ditambahkan.");
+
+      if (data.restaurant) {
+        setRestaurants((current) =>
+          [...current, data.restaurant].sort((a, b) =>
+            a.name.localeCompare(b.name),
+          ),
+        );
+      }
+
+      setTimeout(() => {
+        setShowAddForm(false);
+        resetForm();
+      }, 700);
+    } catch (error) {
+      console.error("Add owner restaurant error:", error);
+
+      setFormError(
+        error instanceof Error ? error.message : "Gagal menambahkan restoran.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="border-b border-gray-200 bg-white">
-        <div className="flex h-20 items-center justify-between px-6 lg:px-8">
+        <div className="flex min-h-20 items-center justify-between gap-4 px-6 py-4 lg:px-8">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-green-600">
               Business
@@ -67,44 +210,466 @@ export default function OwnerRestaurantsPage() {
             </p>
           </div>
 
-          <div className="hidden items-center gap-2 sm:flex">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-green-600">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                resetForm();
+                setShowAddForm(true);
+              }}
+              className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+            >
               <svg
-                className="h-5 w-5"
+                className="h-4 w-4"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="1.8"
+                strokeWidth="2"
                 aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  d="M4 21V5a2 2 0 012-2h12a2 2 0 012 2v16"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M3 21h18"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M8 7h1M12 7h1M16 7h1M8 11h1M12 11h1M16 11h1M8 15h1M12 15h1M16 15h1"
+                  d="M12 5v14M5 12h14"
                 />
               </svg>
-            </div>
+              Tambah Restoran
+            </button>
 
-            <div>
-              <p className="text-sm font-semibold text-gray-900">
-                {restaurants.length} Restoran
-              </p>
+            <div className="hidden items-center gap-2 sm:flex">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-green-600">
+                <svg
+                  className="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M4 21V5a2 2 0 012-2h12a2 2 0 012 2v16"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3 21h18"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M8 7h1M12 7h1M16 7h1M8 11h1M12 11h1M16 11h1M8 15h1M12 15h1M16 15h1"
+                  />
+                </svg>
+              </div>
 
-              <p className="text-xs text-gray-500">Terdaftar di TableGo</p>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">
+                  {restaurants.length} Restoran
+                </p>
+
+                <p className="text-xs text-gray-500">Terdaftar di TableGo</p>
+              </div>
             </div>
           </div>
         </div>
       </header>
+
+      {/* Add Restaurant Modal */}
+      {showAddForm && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:p-6">
+          <div className="my-4 w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl sm:my-8">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-5">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-green-600">
+                  Business
+                </p>
+
+                <h2 className="mt-1 text-xl font-bold text-gray-900">
+                  Tambah Restoran
+                </h2>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  Tambahkan restoran baru ke platform TableGo.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeAddForm}
+                disabled={submitting}
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Tutup"
+              >
+                <svg
+                  className="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 6l12 12M18 6L6 18"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleAddRestaurant}>
+              <div className="max-h-[70vh] overflow-y-auto px-6 py-6">
+                {formError && (
+                  <div className="mb-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {formError}
+                  </div>
+                )}
+
+                {formSuccess && (
+                  <div className="mb-5 rounded-xl border border-green-100 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+                    {formSuccess}
+                  </div>
+                )}
+
+                {/* Basic Information */}
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900">
+                    Informasi Restoran
+                  </h3>
+
+                  <p className="mt-1 text-xs text-gray-500">
+                    Informasi dasar restoran yang akan ditampilkan di TableGo.
+                  </p>
+                </div>
+
+                <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <label
+                      htmlFor="restaurant-name"
+                      className="mb-2 block text-sm font-semibold text-gray-700"
+                    >
+                      Nama Restoran <span className="text-red-500">*</span>
+                    </label>
+
+                    <input
+                      id="restaurant-name"
+                      type="text"
+                      value={form.name}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          name: event.target.value,
+                        }))
+                      }
+                      placeholder="Contoh: TableGo Bistro Dago"
+                      required
+                      disabled={submitting}
+                      className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label
+                      htmlFor="restaurant-description"
+                      className="mb-2 block text-sm font-semibold text-gray-700"
+                    >
+                      Deskripsi
+                    </label>
+
+                    <textarea
+                      id="restaurant-description"
+                      value={form.description}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          description: event.target.value,
+                        }))
+                      }
+                      placeholder="Deskripsi singkat restoran..."
+                      rows={3}
+                      disabled={submitting}
+                      className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label
+                      htmlFor="restaurant-address"
+                      className="mb-2 block text-sm font-semibold text-gray-700"
+                    >
+                      Alamat <span className="text-red-500">*</span>
+                    </label>
+
+                    <textarea
+                      id="restaurant-address"
+                      value={form.address}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          address: event.target.value,
+                        }))
+                      }
+                      placeholder="Alamat lengkap restoran..."
+                      rows={3}
+                      required
+                      disabled={submitting}
+                      className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="restaurant-phone"
+                      className="mb-2 block text-sm font-semibold text-gray-700"
+                    >
+                      No. Telepon
+                    </label>
+
+                    <input
+                      id="restaurant-phone"
+                      type="text"
+                      value={form.phone}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          phone: event.target.value,
+                        }))
+                      }
+                      placeholder="08xxxxxxxxxx"
+                      disabled={submitting}
+                      className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="restaurant-parent"
+                      className="mb-2 block text-sm font-semibold text-gray-700"
+                    >
+                      Parent Restoran
+                    </label>
+
+                    <select
+                      id="restaurant-parent"
+                      value={form.parentId}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          parentId: event.target.value,
+                        }))
+                      }
+                      disabled={submitting}
+                      className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
+                    >
+                      <option value="">
+                        Restoran utama / tidak ada parent
+                      </option>
+
+                      {restaurants
+                        .filter((restaurant) => !restaurant.parentId)
+                        .map((restaurant) => (
+                          <option key={restaurant.id} value={restaurant.id}>
+                            {restaurant.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label
+                      htmlFor="restaurant-image"
+                      className="mb-2 block text-sm font-semibold text-gray-700"
+                    >
+                      URL Gambar
+                    </label>
+
+                    <input
+                      id="restaurant-image"
+                      type="url"
+                      value={form.image}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          image: event.target.value,
+                        }))
+                      }
+                      placeholder="https://example.com/gambar-restoran.jpg"
+                      disabled={submitting}
+                      className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
+                    />
+
+                    <p className="mt-2 text-xs text-gray-400">
+                      Masukkan URL gambar publik seperti yang digunakan pada
+                      form Admin.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Operating Hours */}
+                <div className="mt-8 border-t border-gray-100 pt-7">
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900">
+                      Jam Operasional
+                    </h3>
+
+                    <p className="mt-1 text-xs text-gray-500">
+                      Atur jam buka restoran untuk setiap hari. Zona waktu
+                      menggunakan WIB.
+                    </p>
+                  </div>
+
+                  <div className="mt-5 overflow-hidden rounded-xl border border-gray-200">
+                    <div className="hidden grid-cols-[1.3fr_1fr_1fr_80px] gap-4 border-b border-gray-200 bg-gray-50 px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-400 sm:grid">
+                      <span>Hari</span>
+                      <span>Jam Buka</span>
+                      <span>Jam Tutup</span>
+                      <span className="text-center">Status</span>
+                    </div>
+
+                    <div className="divide-y divide-gray-100">
+                      {operatingHours.map((hour) => (
+                        <div
+                          key={hour.dayOfWeek}
+                          className="grid gap-3 px-4 py-4 sm:grid-cols-[1.3fr_1fr_1fr_80px] sm:items-center sm:gap-4"
+                        >
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">
+                              {DAY_NAMES[hour.dayOfWeek - 1]}
+                            </p>
+
+                            <p className="text-xs text-gray-400 sm:hidden">
+                              {hour.isClosed ? "Tutup" : "WIB"}
+                            </p>
+                          </div>
+
+                          <div>
+                            <label
+                              htmlFor={`open-${hour.dayOfWeek}`}
+                              className="mb-1 block text-xs text-gray-400 sm:hidden"
+                            >
+                              Jam Buka
+                            </label>
+
+                            <input
+                              id={`open-${hour.dayOfWeek}`}
+                              type="time"
+                              value={hour.openTime}
+                              onChange={(event) =>
+                                updateOperatingHour(
+                                  hour.dayOfWeek,
+                                  "openTime",
+                                  event.target.value,
+                                )
+                              }
+                              disabled={submitting || hour.isClosed}
+                              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50 disabled:text-gray-400"
+                            />
+                          </div>
+
+                          <div>
+                            <label
+                              htmlFor={`close-${hour.dayOfWeek}`}
+                              className="mb-1 block text-xs text-gray-400 sm:hidden"
+                            >
+                              Jam Tutup
+                            </label>
+
+                            <input
+                              id={`close-${hour.dayOfWeek}`}
+                              type="time"
+                              value={hour.closeTime}
+                              onChange={(event) =>
+                                updateOperatingHour(
+                                  hour.dayOfWeek,
+                                  "closeTime",
+                                  event.target.value,
+                                )
+                              }
+                              disabled={submitting || hour.isClosed}
+                              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50 disabled:text-gray-400"
+                            />
+                          </div>
+
+                          <label className="flex items-center justify-start gap-2 sm:justify-center">
+                            <input
+                              type="checkbox"
+                              checked={hour.isClosed}
+                              onChange={(event) =>
+                                updateOperatingHour(
+                                  hour.dayOfWeek,
+                                  "isClosed",
+                                  event.target.checked,
+                                )
+                              }
+                              disabled={submitting}
+                              className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                            />
+
+                            <span className="text-sm text-gray-600 sm:hidden">
+                              Tutup
+                            </span>
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Form Actions */}
+              <div className="flex flex-col-reverse gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeAddForm}
+                  disabled={submitting}
+                  className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Batal
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {submitting ? (
+                    <>
+                      <svg
+                        className="h-4 w-4 animate-spin"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden="true"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="9"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                        />
+
+                        <path
+                          className="opacity-75"
+                          d="M21 12a9 9 0 00-9-9"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      Menyimpan...
+                    </>
+                  ) : (
+                    "Tambah Restoran"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="p-6 lg:p-8">
@@ -141,11 +706,13 @@ export default function OwnerRestaurantsPage() {
                       strokeLinejoin="round"
                       d="M4 21V5a2 2 0 012-2h12a2 2 0 012 2v16"
                     />
+
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       d="M3 21h18"
                     />
+
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -288,11 +855,13 @@ export default function OwnerRestaurantsPage() {
                           strokeLinejoin="round"
                           d="M12 9v4"
                         />
+
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           d="M12 17h.01"
                         />
+
                         <circle cx="12" cy="12" r="9" />
                       </svg>
                     </div>
@@ -324,6 +893,7 @@ export default function OwnerRestaurantsPage() {
                         strokeLinejoin="round"
                         d="M4 21V5a2 2 0 012-2h12a2 2 0 012 2v16"
                       />
+
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -364,11 +934,13 @@ export default function OwnerRestaurantsPage() {
                               strokeLinejoin="round"
                               d="M4 21V5a2 2 0 012-2h12a2 2 0 012 2v16"
                             />
+
                             <path
                               strokeLinecap="round"
                               strokeLinejoin="round"
                               d="M3 21h18"
                             />
+
                             <path
                               strokeLinecap="round"
                               strokeLinejoin="round"
@@ -398,6 +970,7 @@ export default function OwnerRestaurantsPage() {
                                     strokeLinejoin="round"
                                     d="M12 21s7-5.25 7-11a7 7 0 10-14 0c0 5.75 7 11 7 11z"
                                   />
+
                                   <circle cx="12" cy="10" r="2.5" />
                                 </svg>
 
@@ -418,7 +991,7 @@ export default function OwnerRestaurantsPage() {
                             </p>
 
                             <Link
-                              href={`/admin/restaurants/${restaurant.id}/tables`}
+                              href={`/owner/restaurants/${restaurant.id}/tables`}
                               className="inline-flex items-center gap-1.5 text-xs font-bold text-green-600 transition hover:text-green-700"
                             >
                               Kelola Meja
