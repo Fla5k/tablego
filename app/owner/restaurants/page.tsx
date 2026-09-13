@@ -34,7 +34,7 @@ const DAY_NAMES = [
 function createDefaultOperatingHours(): OperatingHour[] {
   return DAY_NAMES.map((_, index) => ({
     dayOfWeek: index + 1,
-    openTime: "10:00",
+    openTime: "09:00",
     closeTime: "22:00",
     isClosed: false,
   }));
@@ -51,6 +51,7 @@ export default function OwnerRestaurantsPage() {
   );
 
   const [submitting, setSubmitting] = useState(false);
+
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
 
@@ -120,6 +121,12 @@ export default function OwnerRestaurantsPage() {
   function openAddForm() {
     resetForm();
     setShowForm(true);
+
+    window.setTimeout(() => {
+      document
+        .getElementById("restaurant-form")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
   }
 
   function openEditForm(restaurant: Restaurant) {
@@ -146,7 +153,7 @@ export default function OwnerRestaurantsPage() {
       return (
         existingHour ?? {
           dayOfWeek,
-          openTime: "10:00",
+          openTime: "09:00",
           closeTime: "22:00",
           isClosed: false,
         }
@@ -154,10 +161,15 @@ export default function OwnerRestaurantsPage() {
     });
 
     setOperatingHours(mergedHours);
-
     setFormError("");
     setFormSuccess("");
     setShowForm(true);
+
+    window.setTimeout(() => {
+      document
+        .getElementById("restaurant-form")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
   }
 
   function closeForm() {
@@ -251,7 +263,7 @@ export default function OwnerRestaurantsPage() {
           : "Restoran berhasil ditambahkan.",
       );
 
-      setTimeout(() => {
+      window.setTimeout(() => {
         setShowForm(false);
         resetForm();
       }, 700);
@@ -272,6 +284,11 @@ export default function OwnerRestaurantsPage() {
       setSubmitting(false);
     }
   }
+
+  const parentRestaurants = restaurants.filter(
+    (restaurant) =>
+      !restaurant.parentId && restaurant.id !== editingRestaurant?.id,
+  );
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -295,24 +312,46 @@ export default function OwnerRestaurantsPage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={openAddForm}
+              onClick={showForm ? closeForm : openAddForm}
               className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
             >
-              <svg
-                className="h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 5v14M5 12h14"
-                />
-              </svg>
-              Tambah Restoran
+              {showForm ? (
+                <>
+                  <svg
+                    className="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 6l12 12M18 6L6 18"
+                    />
+                  </svg>
+                  Tutup Form
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 5v14M5 12h14"
+                    />
+                  </svg>
+                  Tambah Restoran
+                </>
+              )}
             </button>
 
             <div className="hidden items-center gap-2 sm:flex">
@@ -330,13 +369,11 @@ export default function OwnerRestaurantsPage() {
                     strokeLinejoin="round"
                     d="M4 21V5a2 2 0 012-2h12a2 2 0 012 2v16"
                   />
-
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     d="M3 21h18"
                   />
-
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -356,427 +393,6 @@ export default function OwnerRestaurantsPage() {
           </div>
         </div>
       </header>
-
-      {/* Add / Edit Restaurant Modal */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:p-6">
-          <div className="my-4 w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl sm:my-8">
-            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-5">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-green-600">
-                  Business
-                </p>
-
-                <h2 className="mt-1 text-xl font-bold text-gray-900">
-                  {editingRestaurant ? "Edit Restoran" : "Tambah Restoran"}
-                </h2>
-
-                <p className="mt-1 text-sm text-gray-500">
-                  {editingRestaurant
-                    ? "Perbarui informasi restoran dan jam operasional."
-                    : "Tambahkan restoran baru ke platform TableGo."}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={closeForm}
-                disabled={submitting}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label="Tutup"
-              >
-                <svg
-                  className="h-5 w-5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6 6l12 12M18 6L6 18"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit}>
-              <div className="max-h-[70vh] overflow-y-auto px-6 py-6">
-                {formError && (
-                  <div className="mb-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {formError}
-                  </div>
-                )}
-
-                {formSuccess && (
-                  <div className="mb-5 rounded-xl border border-green-100 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
-                    {formSuccess}
-                  </div>
-                )}
-
-                {/* Basic Information */}
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900">
-                    Informasi Restoran
-                  </h3>
-
-                  <p className="mt-1 text-xs text-gray-500">
-                    Informasi dasar restoran yang akan ditampilkan di TableGo.
-                  </p>
-                </div>
-
-                <div className="mt-5 grid gap-5 sm:grid-cols-2">
-                  {/* Name */}
-                  <div className="sm:col-span-2">
-                    <label
-                      htmlFor="restaurant-name"
-                      className="mb-2 block text-sm font-semibold text-gray-700"
-                    >
-                      Nama Restoran <span className="text-red-500">*</span>
-                    </label>
-
-                    <input
-                      id="restaurant-name"
-                      type="text"
-                      value={form.name}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          name: event.target.value,
-                        }))
-                      }
-                      placeholder="Contoh: TableGo Bistro Dago"
-                      required
-                      disabled={submitting}
-                      className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
-                    />
-                  </div>
-
-                  {/* Description */}
-                  <div className="sm:col-span-2">
-                    <label
-                      htmlFor="restaurant-description"
-                      className="mb-2 block text-sm font-semibold text-gray-700"
-                    >
-                      Deskripsi
-                    </label>
-
-                    <textarea
-                      id="restaurant-description"
-                      value={form.description}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          description: event.target.value,
-                        }))
-                      }
-                      placeholder="Deskripsi singkat restoran..."
-                      rows={3}
-                      disabled={submitting}
-                      className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
-                    />
-                  </div>
-
-                  {/* Address */}
-                  <div className="sm:col-span-2">
-                    <label
-                      htmlFor="restaurant-address"
-                      className="mb-2 block text-sm font-semibold text-gray-700"
-                    >
-                      Alamat <span className="text-red-500">*</span>
-                    </label>
-
-                    <textarea
-                      id="restaurant-address"
-                      value={form.address}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          address: event.target.value,
-                        }))
-                      }
-                      placeholder="Alamat lengkap restoran..."
-                      rows={3}
-                      required
-                      disabled={submitting}
-                      className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
-                    />
-                  </div>
-
-                  {/* Phone */}
-                  <div>
-                    <label
-                      htmlFor="restaurant-phone"
-                      className="mb-2 block text-sm font-semibold text-gray-700"
-                    >
-                      No. Telepon
-                    </label>
-
-                    <input
-                      id="restaurant-phone"
-                      type="text"
-                      value={form.phone}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          phone: event.target.value,
-                        }))
-                      }
-                      placeholder="08xxxxxxxxxx"
-                      disabled={submitting}
-                      className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
-                    />
-                  </div>
-
-                  {/* Parent Restaurant */}
-                  <div>
-                    <label
-                      htmlFor="restaurant-parent"
-                      className="mb-2 block text-sm font-semibold text-gray-700"
-                    >
-                      Parent Restoran
-                    </label>
-
-                    <select
-                      id="restaurant-parent"
-                      value={form.parentId}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          parentId: event.target.value,
-                        }))
-                      }
-                      disabled={submitting}
-                      className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
-                    >
-                      <option value="">
-                        Restoran utama / tidak ada parent
-                      </option>
-
-                      {restaurants
-                        .filter(
-                          (restaurant) =>
-                            !restaurant.parentId &&
-                            restaurant.id !== editingRestaurant?.id,
-                        )
-                        .map((restaurant) => (
-                          <option key={restaurant.id} value={restaurant.id}>
-                            {restaurant.name}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-
-                  {/* Image */}
-                  <div className="sm:col-span-2">
-                    <label
-                      htmlFor="restaurant-image"
-                      className="mb-2 block text-sm font-semibold text-gray-700"
-                    >
-                      URL Gambar
-                    </label>
-
-                    <input
-                      id="restaurant-image"
-                      type="url"
-                      value={form.image}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          image: event.target.value,
-                        }))
-                      }
-                      placeholder="https://example.com/gambar-restoran.jpg"
-                      disabled={submitting}
-                      className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
-                    />
-
-                    <p className="mt-2 text-xs text-gray-400">
-                      Masukkan URL gambar publik restoran.
-                    </p>
-
-                    {form.image && (
-                      <div className="mt-3 overflow-hidden rounded-xl border border-gray-200">
-                        <img
-                          src={form.image}
-                          alt="Preview restoran"
-                          className="h-40 w-full object-cover"
-                          onError={(event) => {
-                            event.currentTarget.style.display = "none";
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Operating Hours */}
-                <div className="mt-8 border-t border-gray-100 pt-7">
-                  <div>
-                    <h3 className="text-sm font-bold text-gray-900">
-                      Jam Operasional
-                    </h3>
-
-                    <p className="mt-1 text-xs text-gray-500">
-                      Atur jam buka restoran untuk setiap hari. Zona waktu
-                      menggunakan WIB.
-                    </p>
-                  </div>
-
-                  <div className="mt-5 overflow-hidden rounded-xl border border-gray-200">
-                    <div className="hidden grid-cols-[1.3fr_1fr_1fr_80px] gap-4 border-b border-gray-200 bg-gray-50 px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-400 sm:grid">
-                      <span>Hari</span>
-                      <span>Jam Buka</span>
-                      <span>Jam Tutup</span>
-                      <span className="text-center">Status</span>
-                    </div>
-
-                    <div className="divide-y divide-gray-100">
-                      {operatingHours.map((hour) => (
-                        <div
-                          key={hour.dayOfWeek}
-                          className="grid gap-3 px-4 py-4 sm:grid-cols-[1.3fr_1fr_1fr_80px] sm:items-center sm:gap-4"
-                        >
-                          <div>
-                            <p className="text-sm font-semibold text-gray-900">
-                              {DAY_NAMES[hour.dayOfWeek - 1]}
-                            </p>
-
-                            <p className="text-xs text-gray-400 sm:hidden">
-                              {hour.isClosed ? "Tutup" : "WIB"}
-                            </p>
-                          </div>
-
-                          <div>
-                            <label
-                              htmlFor={`open-${hour.dayOfWeek}`}
-                              className="mb-1 block text-xs text-gray-400 sm:hidden"
-                            >
-                              Jam Buka
-                            </label>
-
-                            <input
-                              id={`open-${hour.dayOfWeek}`}
-                              type="time"
-                              value={hour.openTime}
-                              onChange={(event) =>
-                                updateOperatingHour(
-                                  hour.dayOfWeek,
-                                  "openTime",
-                                  event.target.value,
-                                )
-                              }
-                              disabled={submitting || hour.isClosed}
-                              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50 disabled:text-gray-400"
-                            />
-                          </div>
-
-                          <div>
-                            <label
-                              htmlFor={`close-${hour.dayOfWeek}`}
-                              className="mb-1 block text-xs text-gray-400 sm:hidden"
-                            >
-                              Jam Tutup
-                            </label>
-
-                            <input
-                              id={`close-${hour.dayOfWeek}`}
-                              type="time"
-                              value={hour.closeTime}
-                              onChange={(event) =>
-                                updateOperatingHour(
-                                  hour.dayOfWeek,
-                                  "closeTime",
-                                  event.target.value,
-                                )
-                              }
-                              disabled={submitting || hour.isClosed}
-                              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50 disabled:text-gray-400"
-                            />
-                          </div>
-
-                          <label className="flex items-center justify-start gap-2 sm:justify-center">
-                            <input
-                              type="checkbox"
-                              checked={hour.isClosed}
-                              onChange={(event) =>
-                                updateOperatingHour(
-                                  hour.dayOfWeek,
-                                  "isClosed",
-                                  event.target.checked,
-                                )
-                              }
-                              disabled={submitting}
-                              className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
-                            />
-
-                            <span className="text-sm text-gray-600 sm:hidden">
-                              Tutup
-                            </span>
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Form Actions */}
-              <div className="flex flex-col-reverse gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  onClick={closeForm}
-                  disabled={submitting}
-                  className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Batal
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {submitting ? (
-                    <>
-                      <svg
-                        className="h-4 w-4 animate-spin"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        aria-hidden="true"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="9"
-                          stroke="currentColor"
-                          strokeWidth="3"
-                        />
-
-                        <path
-                          className="opacity-75"
-                          d="M21 12a9 9 0 00-9-9"
-                          stroke="currentColor"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                      Menyimpan...
-                    </>
-                  ) : editingRestaurant ? (
-                    "Simpan Perubahan"
-                  ) : (
-                    "Tambah Restoran"
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Content */}
       <div className="p-6 lg:p-8">
@@ -813,13 +429,11 @@ export default function OwnerRestaurantsPage() {
                       strokeLinejoin="round"
                       d="M4 21V5a2 2 0 012-2h12a2 2 0 012 2v16"
                     />
-
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       d="M3 21h18"
                     />
-
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -901,8 +515,445 @@ export default function OwnerRestaurantsPage() {
             </div>
           </div>
 
+          {/* Add / Edit Restaurant Form */}
+          {showForm && (
+            <section
+              id="restaurant-form"
+              className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 text-gray-900 shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-green-600">
+                    {editingRestaurant ? "Edit Restoran" : "Tambah Restoran"}
+                  </p>
+
+                  <h2 className="mt-1 text-2xl font-bold text-gray-900">
+                    {editingRestaurant
+                      ? "Perbarui Informasi Restoran"
+                      : "Tambah Restoran Baru"}
+                  </h2>
+
+                  <p className="mt-1 text-sm text-gray-500">
+                    Isi informasi restoran, cabang, dan jam operasional
+                    restoran.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={closeForm}
+                  disabled={submitting}
+                  className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Tutup
+                </button>
+              </div>
+
+              {formError && (
+                <div className="mt-6 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {formError}
+                </div>
+              )}
+
+              {formSuccess && (
+                <div className="mt-6 rounded-xl border border-green-100 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+                  {formSuccess}
+                </div>
+              )}
+
+              <form
+                className="mt-6 grid gap-5 md:grid-cols-2"
+                onSubmit={handleSubmit}
+              >
+                {/* Nama Restoran */}
+                <div>
+                  <label
+                    htmlFor="restaurant-name"
+                    className="mb-2 block text-sm font-semibold text-gray-700"
+                  >
+                    Nama Restoran <span className="text-red-500">*</span>
+                  </label>
+
+                  <input
+                    id="restaurant-name"
+                    type="text"
+                    value={form.name}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        name: event.target.value,
+                      }))
+                    }
+                    placeholder="Contoh: TableGo Bistro Dago"
+                    required
+                    disabled={submitting}
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
+                  />
+                </div>
+
+                {/* Nomor Telepon */}
+                <div>
+                  <label
+                    htmlFor="restaurant-phone"
+                    className="mb-2 block text-sm font-semibold text-gray-700"
+                  >
+                    Nomor Telepon
+                  </label>
+
+                  <input
+                    id="restaurant-phone"
+                    type="text"
+                    value={form.phone}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        phone: event.target.value,
+                      }))
+                    }
+                    placeholder="08xxxxxxxxxx"
+                    disabled={submitting}
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
+                  />
+                </div>
+
+                {/* Alamat */}
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="restaurant-address"
+                    className="mb-2 block text-sm font-semibold text-gray-700"
+                  >
+                    Alamat <span className="text-red-500">*</span>
+                  </label>
+
+                  <input
+                    id="restaurant-address"
+                    type="text"
+                    value={form.address}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        address: event.target.value,
+                      }))
+                    }
+                    placeholder="Alamat lengkap restoran..."
+                    required
+                    disabled={submitting}
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
+                  />
+                </div>
+
+                {/* Deskripsi */}
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="restaurant-description"
+                    className="mb-2 block text-sm font-semibold text-gray-700"
+                  >
+                    Deskripsi
+                  </label>
+
+                  <textarea
+                    id="restaurant-description"
+                    value={form.description}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        description: event.target.value,
+                      }))
+                    }
+                    placeholder="Deskripsi singkat restoran..."
+                    rows={4}
+                    disabled={submitting}
+                    className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
+                  />
+                </div>
+
+                {/* URL Gambar */}
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="restaurant-image"
+                    className="mb-2 block text-sm font-semibold text-gray-700"
+                  >
+                    URL Gambar
+                  </label>
+
+                  <input
+                    id="restaurant-image"
+                    type="url"
+                    value={form.image}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        image: event.target.value,
+                      }))
+                    }
+                    placeholder="https://example.com/gambar-restoran.jpg"
+                    disabled={submitting}
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
+                  />
+                </div>
+
+                {/* Cabang Restoran */}
+                <div className="md:col-span-2 rounded-2xl bg-gray-50 p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-100 text-green-600">
+                      <span className="text-lg">🏢</span>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900">
+                        Cabang Restoran
+                      </h3>
+
+                      <p className="mt-1 text-xs leading-5 text-gray-500">
+                        Tentukan apakah restoran ini merupakan restoran utama
+                        atau cabang dari restoran lain.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5">
+                    <label
+                      htmlFor="restaurant-parent"
+                      className="mb-2 block text-sm font-semibold text-gray-700"
+                    >
+                      Induk Restoran
+                    </label>
+
+                    <select
+                      id="restaurant-parent"
+                      value={form.parentId}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          parentId: event.target.value,
+                        }))
+                      }
+                      disabled={submitting}
+                      className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
+                    >
+                      <option value="">— Restoran Utama —</option>
+
+                      {parentRestaurants.map((restaurant) => (
+                        <option key={restaurant.id} value={restaurant.id}>
+                          {restaurant.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {form.parentId ? (
+                    <div className="mt-4 rounded-xl border border-green-100 bg-green-50 px-4 py-3">
+                      <p className="text-sm font-semibold text-green-800">
+                        Restoran ini akan menjadi cabang.
+                      </p>
+
+                      <p className="mt-1 text-xs text-green-700">
+                        Induk:{" "}
+                        <span className="font-semibold">
+                          {parentRestaurants.find(
+                            (restaurant) =>
+                              String(restaurant.id) === form.parentId,
+                          )?.name ?? "Restoran"}
+                        </span>
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-4 rounded-xl border border-gray-200 bg-white px-4 py-3">
+                      <p className="text-sm font-semibold text-gray-800">
+                        Restoran Utama
+                      </p>
+
+                      <p className="mt-1 text-xs text-gray-500">
+                        Restoran ini tidak memiliki induk restoran.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Jam Operasional */}
+                <div className="md:col-span-2 rounded-2xl bg-gray-50 p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-100 text-green-600">
+                      <span className="text-lg">🕐</span>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900">
+                        Jam Operasional
+                      </h3>
+
+                      <p className="mt-1 text-xs leading-5 text-gray-500">
+                        Atur jam buka restoran untuk setiap hari. Zona waktu
+                        menggunakan WIB.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 space-y-3">
+                    {operatingHours.map((hour) => (
+                      <div
+                        key={hour.dayOfWeek}
+                        className="rounded-xl border border-gray-200 bg-white p-4"
+                      >
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                          <div className="min-w-28">
+                            <p className="text-sm font-semibold text-gray-900">
+                              {DAY_NAMES[hour.dayOfWeek - 1]}
+                            </p>
+                          </div>
+
+                          <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-end">
+                            {!hour.isClosed ? (
+                              <>
+                                <div className="flex-1">
+                                  <label
+                                    htmlFor={`open-${hour.dayOfWeek}`}
+                                    className="mb-1.5 block text-xs font-medium text-gray-500"
+                                  >
+                                    Buka
+                                  </label>
+
+                                  <input
+                                    id={`open-${hour.dayOfWeek}`}
+                                    type="time"
+                                    value={hour.openTime}
+                                    onChange={(event) =>
+                                      updateOperatingHour(
+                                        hour.dayOfWeek,
+                                        "openTime",
+                                        event.target.value,
+                                      )
+                                    }
+                                    disabled={submitting}
+                                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
+                                  />
+                                </div>
+
+                                <div className="hidden pb-3 text-xs font-medium text-gray-400 sm:block">
+                                  sampai
+                                </div>
+
+                                <div className="flex-1">
+                                  <label
+                                    htmlFor={`close-${hour.dayOfWeek}`}
+                                    className="mb-1.5 block text-xs font-medium text-gray-500"
+                                  >
+                                    Tutup
+                                  </label>
+
+                                  <input
+                                    id={`close-${hour.dayOfWeek}`}
+                                    type="time"
+                                    value={hour.closeTime}
+                                    onChange={(event) =>
+                                      updateOperatingHour(
+                                        hour.dayOfWeek,
+                                        "closeTime",
+                                        event.target.value,
+                                      )
+                                    }
+                                    disabled={submitting}
+                                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-50"
+                                  />
+                                </div>
+                              </>
+                            ) : (
+                              <div className="flex flex-1 items-center rounded-xl border border-red-100 bg-red-50 px-4 py-3">
+                                <p className="text-sm font-semibold text-red-600">
+                                  Restoran Tutup
+                                </p>
+                              </div>
+                            )}
+
+                            <label className="flex shrink-0 cursor-pointer items-center gap-2 pb-1">
+                              <input
+                                type="checkbox"
+                                checked={hour.isClosed}
+                                onChange={(event) =>
+                                  updateOperatingHour(
+                                    hour.dayOfWeek,
+                                    "isClosed",
+                                    event.target.checked,
+                                  )
+                                }
+                                disabled={submitting}
+                                className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                              />
+
+                              <span className="text-sm font-medium text-gray-600">
+                                Tutup
+                              </span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-green-100 bg-green-50 px-4 py-3">
+                    <p className="text-sm font-medium text-green-800">
+                      Booking hanya dapat dilakukan pada jam operasional
+                      restoran.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Form Actions */}
+                <div className="md:col-span-2 flex flex-col-reverse gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={closeForm}
+                    disabled={submitting}
+                    className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Batal
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {submitting ? (
+                      <>
+                        <svg
+                          className="h-4 w-4 animate-spin"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          aria-hidden="true"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="9"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                          />
+
+                          <path
+                            className="opacity-75"
+                            d="M21 12a9 9 0 00-9-9"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                        Menyimpan...
+                      </>
+                    ) : editingRestaurant ? (
+                      "Simpan Perubahan"
+                    ) : (
+                      "Tambah Restoran"
+                    )}
+                  </button>
+                </div>
+              </form>
+            </section>
+          )}
+
           {/* Restaurant List */}
-          <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <section className="mt-8 rounded-2xl border border-gray-200 bg-white shadow-sm">
             <div className="flex flex-col gap-3 border-b border-gray-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-green-600">
